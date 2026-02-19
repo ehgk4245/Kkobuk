@@ -1,0 +1,19 @@
+node_modules
+dist
+out
+.DS_Store
+.eslintcache
+*.log*
+
+# VSCode
+.vscode/
+
+# Electron builder output
+build/win-unpacked
+build/mac
+build/linux-unpacked
+*.exe
+*.dmg
+*.AppImage
+*.snap
+*.deb
