@@ -1,9 +1,32 @@
-body {
-  overflow: hidden;
-  user-select: none;
+@import "tailwindcss";
+@import "@fontsource/inter/400.css";
+@import "@fontsource/inter/500.css";
+@import "@fontsource/inter/700.css";
+@import "@fontsource/inter/800.css";
+
+
+@theme {
+  --color-primary-light: #8BC34A;
+  --color-primary-main: #4CAF50;
+  --color-accent-main: #FFC107;
+  --color-accent-dark: #FFD54F;
+  --color-gray-900: #121212;
+  --color-gray-800: #1E1E1E;
+
+  --animate-fade-in-down: fade-in-down 0.4s ease both;
+  --animate-fade-in-up: fade-in-up 0.4s ease both;
 }
 
-#root {
-  width: 100%;
-  height: 100vh;
+@keyframes fade-in-down {
+  from { opacity: 0; transform: translateY(-16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+:root {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }

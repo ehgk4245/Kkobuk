@@ -1,14 +1,23 @@
-import { app, shell, BrowserWindow, ipcMain } from 'electron'
+import { app, shell, BrowserWindow, ipcMain, Tray, Menu, nativeImage } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 
+const WINDOW_NORMAL_W = 1280;
+const WINDOW_NORMAL_H = 900;
+const WINDOW_MINI_W = 240;
+const WINDOW_MINI_H = 320;
+
+let tray = null;
+let mainWindow = null;
+
 function createWindow() {
   // Create the browser window.
-  const mainWindow = new BrowserWindow({
-    width: 900,
-    height: 670,
+  mainWindow = new BrowserWindow({
+    width: WINDOW_NORMAL_W,
+    height: WINDOW_NORMAL_H,
     show: false,
+    frame: false,
     autoHideMenuBar: true,
     ...(process.platform === 'linux' ? { icon } : {}),
     webPreferences: {
@@ -27,7 +36,6 @@ function createWindow() {
   })
 
   // HMR for renderer base on electron-vite cli.
-  // Load the remote URL for development or the local html file for production.
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
     mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
   } else {
@@ -35,16 +43,9 @@ function createWindow() {
   }
 }
 
-// This method will be called when Electron has finished
-// initialization and is ready to create browser windows.
-// Some APIs can only be used after this event occurs.
 app.whenReady().then(() => {
-  // Set app user model id for windows
   electronApp.setAppUserModelId('com.electron')
 
-  // Default open or close DevTools by F12 in development
-  // and ignore CommandOrControl + R in production.
-  // see https://github.com/alex8088/electron-toolkit/tree/master/packages/utils
   app.on('browser-window-created', (_, window) => {
     optimizer.watchWindowShortcuts(window)
   })
@@ -52,23 +53,55 @@ app.whenReady().then(() => {
   // IPC test
   ipcMain.on('ping', () => console.log('pong'))
 
+  // Window control IPC
+  ipcMain.on('window:minimize', () => {
+    if (mainWindow) mainWindow.minimize();
+  });
+
+  ipcMain.on('window:hide', () => {
+    if (mainWindow) mainWindow.hide();
+  });
+
+  ipcMain.on('window:set-mini-mode', () => {
+    if (mainWindow) {
+      mainWindow.setSize(WINDOW_MINI_W, WINDOW_MINI_H);
+      mainWindow.setAlwaysOnTop(true, 'floating');
+    }
+  });
+
+  ipcMain.on('window:set-normal-mode', () => {
+    if (mainWindow) {
+      mainWindow.setSize(WINDOW_NORMAL_W, WINDOW_NORMAL_H);
+      mainWindow.setAlwaysOnTop(false);
+      mainWindow.center();
+    }
+  });
+
+  // Create Tray
+  const trayIcon = nativeImage.createFromPath(join(__dirname, '../../resources/icon.png'));
+  tray = new Tray(trayIcon.resize({ width: 16, height: 16 }));
+  
+  const contextMenu = Menu.buildFromTemplate([
+    { label: 'Kkobuk 열기', click: () => { if (mainWindow) mainWindow.show(); } },
+    { label: '종료', click: () => { app.quit(); } }
+  ]);
+  
+  tray.setToolTip('Kkobuk - 거북목 예방 알림이');
+  tray.setContextMenu(contextMenu);
+
+  tray.on('click', () => {
+    if (mainWindow) mainWindow.show();
+  });
+
   createWindow()
 
   app.on('activate', function () {
-    // On macOS it's common to re-create a window in the app when the
-    // dock icon is clicked and there are no other windows open.
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
   })
 })
 
-// Quit when all windows are closed, except on macOS. There, it's common
-// for applications and their menu bar to stay active until the user quits
-// explicitly with Cmd + Q.
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit()
   }
 })
-
-// In this file you can include the rest of your app's specific main process
-// code. You can also put them in separate files and require them here.
