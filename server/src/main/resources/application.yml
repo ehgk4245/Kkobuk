@@ -1,0 +1,23 @@
+spring:
+  application:
+    name: server
+
+  datasource:
+    url: jdbc:mysql://localhost:3306/kkobuk
+    username: kkobuk
+    password: kkobuk
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQLDialect
+        format_sql: true
+    show-sql: true
+
+  data:
+    redis:
+      host: localhost
+      port: 6379
