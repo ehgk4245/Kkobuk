@@ -8,11 +8,44 @@ const WINDOW_NORMAL_H = 900;
 const WINDOW_MINI_W = 240;
 const WINDOW_MINI_H = 320;
 
+const PROTOCOL = 'kkobuk';
+const API_BASE = 'http://localhost:8080';
+
 let tray = null;
 let mainWindow = null;
 
+// 딥링크 프로토콜 등록 (싱글 인스턴스)
+const gotTheLock = app.requestSingleInstanceLock();
+
+if (!gotTheLock) {
+  app.quit();
+} else {
+  app.on('second-instance', (_event, commandLine) => {
+    // Windows: 두 번째 인스턴스 실행 시 딥링크 URL이 commandLine에 포함됨
+    const url = commandLine.find((arg) => arg.startsWith(`${PROTOCOL}://`));
+    if (url) handleDeepLink(url);
+
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.show();
+      mainWindow.focus();
+    }
+  });
+}
+
+function handleDeepLink(url) {
+  const parsed = new URL(url);
+  if (parsed.hostname === 'callback') {
+    const accessToken = parsed.searchParams.get('accessToken');
+    const refreshToken = parsed.searchParams.get('refreshToken');
+
+    if (mainWindow && accessToken && refreshToken) {
+      mainWindow.webContents.send('auth:callback', { accessToken, refreshToken });
+    }
+  }
+}
+
 function createWindow() {
-  // Create the browser window.
   mainWindow = new BrowserWindow({
     width: WINDOW_NORMAL_W,
     height: WINDOW_NORMAL_H,
@@ -35,7 +68,6 @@ function createWindow() {
     return { action: 'deny' }
   })
 
-  // HMR for renderer base on electron-vite cli.
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
     mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
   } else {
@@ -44,13 +76,20 @@ function createWindow() {
 }
 
 app.whenReady().then(() => {
+  // 딥링크 프로토콜 등록
+  // Windows 개발 모드: electron.exe가 앱 경로 없이 URL만 받는 문제 방지
+  if (is.dev) {
+    app.setAsDefaultProtocolClient(PROTOCOL, process.execPath, [app.getAppPath()]);
+  } else if (!app.isDefaultProtocolClient(PROTOCOL)) {
+    app.setAsDefaultProtocolClient(PROTOCOL);
+  }
+
   electronApp.setAppUserModelId('com.electron')
 
   app.on('browser-window-created', (_, window) => {
     optimizer.watchWindowShortcuts(window)
   })
 
-  // IPC test
   ipcMain.on('ping', () => console.log('pong'))
 
   // Window control IPC
@@ -77,15 +116,20 @@ app.whenReady().then(() => {
     }
   });
 
+  // Auth IPC: 시스템 브라우저에서 OAuth2 로그인 열기
+  ipcMain.on('auth:login', (_event, provider) => {
+    shell.openExternal(`${API_BASE}/oauth2/authorization/${provider}`);
+  });
+
   // Create Tray
   const trayIcon = nativeImage.createFromPath(join(__dirname, '../../resources/icon.png'));
   tray = new Tray(trayIcon.resize({ width: 16, height: 16 }));
-  
+
   const contextMenu = Menu.buildFromTemplate([
     { label: 'Kkobuk 열기', click: () => { if (mainWindow) mainWindow.show(); } },
     { label: '종료', click: () => { app.quit(); } }
   ]);
-  
+
   tray.setToolTip('Kkobuk - 거북목 예방 알림이');
   tray.setContextMenu(contextMenu);
 
@@ -94,6 +138,11 @@ app.whenReady().then(() => {
   });
 
   createWindow()
+
+  // macOS: open-url 이벤트로 딥링크 수신
+  app.on('open-url', (_event, url) => {
+    handleDeepLink(url);
+  });
 
   app.on('activate', function () {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()

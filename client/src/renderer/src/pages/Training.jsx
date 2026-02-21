@@ -127,7 +127,7 @@ export default function Training() {
             </button>
           ) : (
             <button
-              onClick={() => navigate('/main')}
+              onClick={() => { localStorage.setItem('onboardingComplete', 'true'); navigate('/main'); }}
               className="flex items-center gap-2 px-6 py-3 bg-[#4CAF50] hover:bg-[#43A047] text-white rounded-full font-bold shadow-lg transition-all"
             >
               학습 완료! 메인으로 가기 <ArrowRight size={18} />
