@@ -23,13 +23,15 @@ public class Member extends BaseTimeEntity {
     @Column(name = "nickname", nullable = false, length = 50)
     private String nickname;
 
-    @Enumerated(EnumType.STRING) // ⭐️ 별 다섯 개!
+    @Enumerated(EnumType.STRING)
     @Column(name = "role", nullable = false, length = 20)
     private Role role;
 
-    @Column(name = "provider", nullable = false, updatable = false, length = 20)
-    private String provider;
-
-    @Column(name = "provider_id", nullable = false, updatable = false, length = 100)
-    private String providerId;
+    public static Member create(String email, String nickname) {
+        Member member = new Member();
+        member.email = email;
+        member.nickname = nickname;
+        member.role = Role.USER;
+        return member;
+    }
 }
