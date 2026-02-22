@@ -9,7 +9,7 @@ const WINDOW_MINI_W = 240
 const WINDOW_MINI_H = 320
 
 const PROTOCOL = 'kkobuk'
-const API_BASE = 'http://localhost:8080'
+const API_BASE = import.meta.env.VITE_API_BASE_URL
 
 let tray = null
 let mainWindow = null
