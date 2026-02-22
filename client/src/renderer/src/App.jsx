@@ -1,12 +1,11 @@
-import React from 'react';
-import { HashRouter, Routes, Route } from 'react-router-dom';
-import TitleBar from './components/common/TitleBar';
-import Login from './pages/Login';
-import Onboarding from './pages/Onboarding';
-import Training from './pages/Training';
-import MainScreen from './pages/Main';
-import Dashboard from './pages/Dashboard';
-import Settings from './pages/Settings';
+import { HashRouter, Routes, Route } from 'react-router-dom'
+import TitleBar from './components/common/TitleBar'
+import Login from './pages/Login'
+import Onboarding from './pages/Onboarding'
+import Training from './pages/Training'
+import MainScreen from './pages/Main'
+import Dashboard from './pages/Dashboard'
+import Settings from './pages/Settings'
 
 export default function App() {
   return (
@@ -25,5 +24,5 @@ export default function App() {
         </div>
       </div>
     </HashRouter>
-  );
+  )
 }

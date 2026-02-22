@@ -1,27 +1,27 @@
-import React, { useState } from 'react';
-import { Camera, Check, ArrowRight } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import logo from '../../../../resources/icon.png';
+import { useState } from 'react'
+import { Camera, Check, ArrowRight } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import logo from '../../../../resources/icon.png'
 
 export default function Onboarding() {
-  const navigate = useNavigate();
-  const [permissionGranted, setPermissionGranted] = useState(false);
+  const navigate = useNavigate()
+  const [permissionGranted, setPermissionGranted] = useState(false)
 
   const requestCamera = () => {
-    // 실제 구현에서는 navigator.mediaDevices.getUserMedia() 를 호출합니다.
+    // TODO: navigator.mediaDevices.getUserMedia()로 실제 권한 요청
     setTimeout(() => {
-      setPermissionGranted(true);
-    }, 600);
-  };
+      setPermissionGranted(true)
+    }, 600)
+  }
 
   return (
     <div className="min-h-full h-full bg-gray-900 flex justify-center items-center p-6 font-sans relative">
       <div className="w-full max-w-md bg-gray-800 rounded-[2.5rem] p-10 shadow-xl text-center border border-gray-700">
-        
         <div className="text-6xl mb-6">📸</div>
         <h1 className="text-2xl font-extrabold text-white mb-3">웹캠 권한이 필요해요!</h1>
         <p className="text-gray-400 mb-8 leading-relaxed">
-          Kkobuk은 사용자님의 자세를 실시간으로 분석하기 위해 데스크톱 웹캠 화면에 접근해야 합니다.<br/>
+          Kkobuk은 사용자님의 자세를 실시간으로 분석하기 위해 데스크톱 웹캠 화면에 접근해야 합니다.
+          <br />
           <strong>안심하세요!</strong> 영상은 기기 내에서만 처리되며 서버로 전송되지 않습니다.
         </p>
 
@@ -38,14 +38,14 @@ export default function Onboarding() {
         </div>
 
         {!permissionGranted ? (
-          <button 
+          <button
             onClick={requestCamera}
             className="w-full flex items-center justify-center gap-2 bg-[#4CAF50] hover:bg-[#43A047] text-white font-bold py-4 rounded-2xl transition-all shadow-md hover:shadow-lg"
           >
             <Camera size={20} /> 카메라 권한 허용하기
           </button>
         ) : (
-          <button 
+          <button
             onClick={() => navigate('/training')}
             className="w-full flex items-center justify-center gap-2 bg-[#8BC34A] hover:bg-[#7CB342] text-white font-bold py-4 rounded-2xl transition-all shadow-md hover:shadow-lg animate-fade-in-up"
           >
@@ -54,5 +54,5 @@ export default function Onboarding() {
         )}
       </div>
     </div>
-  );
+  )
 }

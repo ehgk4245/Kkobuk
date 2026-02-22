@@ -1,35 +1,34 @@
-import React, { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { RiKakaoTalkFill } from 'react-icons/ri';
-import { FcGoogle } from 'react-icons/fc';
-import logo from '../../../../resources/icon.png';
+import { useEffect } from 'react'
+import { FcGoogle } from 'react-icons/fc'
+import { RiKakaoTalkFill } from 'react-icons/ri'
+import { useNavigate } from 'react-router-dom'
+import logo from '../../../../resources/icon.png'
 
 export default function Login() {
-  const navigate = useNavigate();
+  const navigate = useNavigate()
 
   useEffect(() => {
-    const accessToken = localStorage.getItem('accessToken');
+    const accessToken = localStorage.getItem('accessToken')
     if (accessToken) {
-      const onboardingComplete = localStorage.getItem('onboardingComplete');
-      navigate(onboardingComplete ? '/main' : '/onboarding');
-      return;
+      const onboardingComplete = localStorage.getItem('onboardingComplete')
+      navigate(onboardingComplete ? '/main' : '/onboarding')
+      return
     }
 
     window.api.auth.onCallback(({ accessToken, refreshToken }) => {
-      localStorage.setItem('accessToken', accessToken);
-      localStorage.setItem('refreshToken', refreshToken);
-      navigate('/onboarding');
-    });
+      localStorage.setItem('accessToken', accessToken)
+      localStorage.setItem('refreshToken', refreshToken)
+      navigate('/onboarding')
+    })
 
     return () => {
-      window.api.auth.removeCallbackListener();
-    };
-  }, [navigate]);
+      window.api.auth.removeCallbackListener()
+    }
+  }, [navigate])
 
   return (
     <div className="min-h-full h-full bg-gray-900 flex justify-center items-center p-6 font-sans relative">
       <div className="w-full max-w-sm bg-gray-800 rounded-[2.5rem] p-8 shadow-xl border border-gray-700 text-center flex flex-col items-center">
-
         {/* 로고 & 타이틀 */}
         <div className="mb-10 text-center animate-fade-in-down">
           <img src={logo} alt="Kkobuk" className="w-36 h-36 mx-auto mb-4 drop-shadow-lg" />
@@ -57,5 +56,5 @@ export default function Login() {
         </div>
       </div>
     </div>
-  );
+  )
 }
