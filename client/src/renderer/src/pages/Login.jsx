@@ -29,14 +29,12 @@ export default function Login() {
   return (
     <div className="min-h-full h-full bg-gray-900 flex justify-center items-center p-6 font-sans relative">
       <div className="w-full max-w-sm bg-gray-800 rounded-[2.5rem] p-8 shadow-xl border border-gray-700 text-center flex flex-col items-center">
-        {/* 로고 & 타이틀 */}
         <div className="mb-10 text-center animate-fade-in-down">
           <img src={logo} alt="Kkobuk" className="w-36 h-36 mx-auto mb-4 drop-shadow-lg" />
           <h1 className="text-3xl font-extrabold text-[#4CAF50] tracking-tight">Kkobuk</h1>
           <p className="text-gray-400 mt-2 font-medium">거북목 예방의 시작</p>
         </div>
 
-        {/* 소셜 로그인 버튼 */}
         <div className="w-full flex flex-col gap-4">
           <button
             onClick={() => window.api.auth.login('kakao')}

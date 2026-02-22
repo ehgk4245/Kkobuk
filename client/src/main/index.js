@@ -14,14 +14,12 @@ const API_BASE = import.meta.env.VITE_API_BASE_URL
 let tray = null
 let mainWindow = null
 
-// 딥링크 프로토콜 등록 (싱글 인스턴스)
 const gotTheLock = app.requestSingleInstanceLock()
 
 if (!gotTheLock) {
   app.quit()
 } else {
   app.on('second-instance', (_event, commandLine) => {
-    // Windows: 두 번째 인스턴스 실행 시 딥링크 URL이 commandLine에 포함됨
     const url = commandLine.find((arg) => arg.startsWith(`${PROTOCOL}://`))
     if (url) handleDeepLink(url)
 
@@ -76,7 +74,6 @@ function createWindow() {
 }
 
 app.whenReady().then(() => {
-  // 딥링크 프로토콜 등록
   // Windows 개발 모드: electron.exe가 앱 경로 없이 URL만 받는 문제 방지
   if (is.dev) {
     app.setAsDefaultProtocolClient(PROTOCOL, process.execPath, [app.getAppPath()])
@@ -92,7 +89,6 @@ app.whenReady().then(() => {
 
   ipcMain.on('ping', () => console.log('pong'))
 
-  // Window control IPC
   ipcMain.on('window:minimize', () => {
     if (mainWindow) mainWindow.minimize()
   })
@@ -116,12 +112,10 @@ app.whenReady().then(() => {
     }
   })
 
-  // Auth IPC: 시스템 브라우저에서 OAuth2 로그인 열기
   ipcMain.on('auth:login', (_event, provider) => {
     shell.openExternal(`${API_BASE}/oauth2/authorization/${provider}`)
   })
 
-  // Create Tray
   const trayIcon = nativeImage.createFromPath(join(__dirname, '../../resources/icon.png'))
   tray = new Tray(trayIcon.resize({ width: 16, height: 16 }))
 
@@ -149,7 +143,6 @@ app.whenReady().then(() => {
 
   createWindow()
 
-  // macOS: open-url 이벤트로 딥링크 수신
   app.on('open-url', (_event, url) => {
     handleDeepLink(url)
   })

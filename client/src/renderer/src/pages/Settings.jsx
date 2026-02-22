@@ -15,9 +15,8 @@ export default function Settings() {
         method: 'POST',
         headers: { Authorization: `Bearer ${accessToken}` }
       })
-    } catch {
-      // 네트워크 오류여도 로컬 상태는 정리
-    } finally {
+    } catch {} // eslint-disable-line no-empty
+    finally {
       localStorage.clear()
       navigate('/')
     }
@@ -25,7 +24,6 @@ export default function Settings() {
 
   return (
     <div className="min-h-full h-full bg-gray-900 text-gray-100 p-6 flex flex-col font-sans">
-      {/* 헤더 네비게이션 */}
       <header className="flex items-center mb-8 relative">
         <button
           onClick={() => navigate('/main')}
@@ -37,7 +35,6 @@ export default function Settings() {
       </header>
 
       <main className="flex-1 w-full max-w-lg mx-auto space-y-6">
-        {/* 학습 모델 관리 */}
         <section className="bg-gray-800 rounded-[2rem] p-6 shadow-md border border-gray-700">
           <div className="flex items-center gap-3 mb-5 text-[#4CAF50]">
             <Database size={22} className="text-[#8BC34A]" />
@@ -60,7 +57,6 @@ export default function Settings() {
           </button>
         </section>
 
-        {/* 일반 설정 항목 */}
         <section className="bg-gray-800 rounded-[2rem] shadow-md border border-gray-700 overflow-hidden">
           <div className="divide-y-2 divide-gray-700">
             <div className="flex items-center justify-between p-6">
@@ -110,7 +106,6 @@ export default function Settings() {
           </div>
         </section>
 
-        {/* 계정 관리 */}
         <section className="bg-gray-800 rounded-[2rem] p-6 shadow-md border border-gray-700">
           <div className="flex items-center gap-3 mb-5 text-gray-500">
             <User size={22} className="text-gray-400" />
