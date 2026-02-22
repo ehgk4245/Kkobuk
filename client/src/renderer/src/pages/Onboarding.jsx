@@ -1,17 +1,19 @@
 import { useState } from 'react'
-import { Camera, Check, ArrowRight } from 'lucide-react'
+import { Camera, Check, ArrowRight, AlertCircle } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import logo from '../../../../resources/icon.png'
+import { useWebcam } from '../context/WebcamContext'
 
 export default function Onboarding() {
   const navigate = useNavigate()
+  const { permissionError, isRequesting, requestPermission } = useWebcam()
   const [permissionGranted, setPermissionGranted] = useState(false)
 
-  const requestCamera = () => {
-    // TODO: navigator.mediaDevices.getUserMedia()로 실제 권한 요청
-    setTimeout(() => {
+  const handleRequestCamera = async () => {
+    const granted = await requestPermission()
+    if (granted) {
       setPermissionGranted(true)
-    }, 600)
+    }
   }
 
   return (
@@ -37,12 +39,32 @@ export default function Onboarding() {
           </div>
         </div>
 
+        {permissionError && (
+          <div className="flex items-start gap-2 bg-red-900/30 border border-red-700/50 rounded-xl p-3 mb-4 text-left">
+            <AlertCircle size={16} className="text-red-400 mt-0.5 shrink-0" />
+            <p className="text-red-300 text-sm">{permissionError}</p>
+          </div>
+        )}
+
         {!permissionGranted ? (
           <button
-            onClick={requestCamera}
-            className="w-full flex items-center justify-center gap-2 bg-[#4CAF50] hover:bg-[#43A047] text-white font-bold py-4 rounded-2xl transition-all shadow-md hover:shadow-lg"
+            onClick={handleRequestCamera}
+            disabled={isRequesting}
+            className="w-full flex items-center justify-center gap-2 bg-[#4CAF50] hover:bg-[#43A047] disabled:bg-[#4CAF50]/50 text-white font-bold py-4 rounded-2xl transition-all shadow-md hover:shadow-lg disabled:cursor-not-allowed"
           >
-            <Camera size={20} /> 카메라 권한 허용하기
+            {isRequesting ? (
+              <>
+                <svg className="animate-spin w-5 h-5" viewBox="0 0 24 24" fill="none">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                </svg>
+                권한 요청 중...
+              </>
+            ) : (
+              <>
+                <Camera size={20} /> 카메라 권한 허용하기
+              </>
+            )}
           </button>
         ) : (
           <button

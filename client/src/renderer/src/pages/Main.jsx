@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import {
   Settings,
   BarChart2,
@@ -10,14 +10,31 @@ import {
   PictureInPicture2
 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
+import { useWebcam } from '../context/WebcamContext'
 
 export default function Main() {
   const navigate = useNavigate()
+  const { stream } = useWebcam()
+  const videoRef = useRef(null)
+  const miniVideoRef = useRef(null)
+
   // TODO: 전역 상태 또는 웹캠 분석 결과와 연동
   const [isGoodPosture] = useState(true)
   const [isTracking, setIsTracking] = useState(false)
   const [isPaused, setIsPaused] = useState(false)
   const [isMiniMode, setIsMiniMode] = useState(false)
+
+  useEffect(() => {
+    if (videoRef.current && stream) {
+      videoRef.current.srcObject = stream
+    }
+  }, [stream])
+
+  useEffect(() => {
+    if (miniVideoRef.current && stream) {
+      miniVideoRef.current.srcObject = stream
+    }
+  }, [stream, isMiniMode])
 
   const handleStop = () => {
     setIsTracking(false)
@@ -53,12 +70,22 @@ export default function Main() {
                   : 'border-[#FFC107] shadow-[#FFC107]/20'
           }`}
         >
-          <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-700">
-            <Camera
-              size={36}
-              className={`mb-2 transition-transform ${isTracking ? 'opacity-40' : 'opacity-20'}`}
+          {stream && isTracking && !isPaused ? (
+            <video
+              ref={miniVideoRef}
+              autoPlay
+              playsInline
+              muted
+              className="absolute inset-0 w-full h-full object-cover scale-x-[-1]"
             />
-          </div>
+          ) : (
+            <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-700">
+              <Camera
+                size={36}
+                className={`mb-2 transition-transform ${isTracking ? 'opacity-40' : 'opacity-20'}`}
+              />
+            </div>
+          )}
           {isTracking && (
             <div
               className={`absolute bottom-4 left-1/2 -translate-x-1/2 w-[85%] py-2 text-center rounded-full font-extrabold shadow-lg text-sm transition-colors ${
@@ -146,7 +173,6 @@ export default function Main() {
           </button>
         </div>
 
-        {/* 웹캠 뷰어 */}
         <div
           className={`relative w-full aspect-video bg-black rounded-[2.5rem] overflow-hidden shadow-2xl transition-all duration-700 ease-in-out border-4 ${
             !isTracking
@@ -158,19 +184,30 @@ export default function Main() {
                   : 'border-[#FFC107] shadow-[#FFC107]/20'
           }`}
         >
-          {/* TODO: <video> 태그 연결 */}
-          <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-700">
-            <Camera
-              size={64}
-              strokeWidth={1.5}
-              className={`mb-4 transition-transform ${isTracking ? 'opacity-40 hover:scale-110' : 'opacity-20'}`}
+          {stream && (
+            <video
+              ref={videoRef}
+              autoPlay
+              playsInline
+              muted
+              className={`absolute inset-0 w-full h-full object-cover scale-x-[-1] transition-opacity duration-500 ${
+                isTracking && !isPaused ? 'opacity-100' : 'opacity-0'
+              }`}
             />
-            <span
-              className={`text-sm font-bold tracking-widest ${isTracking ? 'opacity-40' : 'opacity-20'}`}
-            >
-              {isTracking ? 'LIVE WEBCAM PREVIEW' : 'CAMERA OFF'}
-            </span>
-          </div>
+          )}
+
+          {(!isTracking || isPaused) && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-700">
+              <Camera
+                size={64}
+                strokeWidth={1.5}
+                className="mb-4 opacity-20"
+              />
+              <span className="text-sm font-bold tracking-widest opacity-20">
+                {isPaused ? 'PAUSED' : 'CAMERA OFF'}
+              </span>
+            </div>
+          )}
 
           {isTracking && (
             <div className="absolute bottom-8 left-0 w-full flex flex-col items-center z-10">
@@ -200,7 +237,6 @@ export default function Main() {
           )}
         </div>
 
-        {/* 측정 컨트롤 */}
         <div className="mt-8 flex gap-4 w-full max-w-md">
           {!isTracking ? (
             <button
@@ -232,7 +268,6 @@ export default function Main() {
           )}
         </div>
 
-        {/* 요약 카드 */}
         <div className="mt-8 w-full flex gap-6">
           <div className="flex-1 bg-gray-800 rounded-[2rem] p-6 shadow-md border border-gray-700 transform transition-transform hover:-translate-y-1">
             <div className="flex items-center gap-3 mb-2">
