@@ -15,8 +15,9 @@ export default function Settings() {
         method: 'POST',
         headers: { Authorization: `Bearer ${accessToken}` }
       })
-    } catch {} // eslint-disable-line no-empty
-    finally {
+    } catch {
+    } finally {
+      // eslint-disable-line no-empty
       localStorage.clear()
       navigate('/')
     }
