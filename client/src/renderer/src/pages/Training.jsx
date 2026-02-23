@@ -106,7 +106,7 @@ export default function Training() {
       const lm = poseLandmarkerRef.current
       if (video && lm && video.readyState >= 2) {
         try {
-          const results = lm.detectForVideo(video, elapsed)
+          const results = lm.detectForVideo(video, performance.now())
           if (results.landmarks?.[0]) {
             sessionSamples.push({
               label,

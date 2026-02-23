@@ -1,4 +1,4 @@
-import { createContext, useContext, useRef, useState, useCallback } from 'react'
+import { createContext, useContext, useRef, useState, useCallback, useEffect } from 'react'
 
 const WebcamContext = createContext(null)
 
@@ -30,6 +30,10 @@ export function WebcamProvider({ children }) {
     }
   }, [])
 
+  useEffect(() => {
+    requestPermission()
+  }, [requestPermission])
+
   const stopStream = useCallback(() => {
     if (streamRef.current) {
       streamRef.current.getTracks().forEach((track) => track.stop())
@@ -39,7 +43,9 @@ export function WebcamProvider({ children }) {
   }, [])
 
   return (
-    <WebcamContext.Provider value={{ stream, permissionError, isRequesting, requestPermission, stopStream }}>
+    <WebcamContext.Provider
+      value={{ stream, permissionError, isRequesting, requestPermission, stopStream }}
+    >
       {children}
     </WebcamContext.Provider>
   )

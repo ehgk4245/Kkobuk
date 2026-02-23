@@ -28,7 +28,7 @@ export default function Main() {
     if (videoRef.current && stream) {
       videoRef.current.srcObject = stream
     }
-  }, [stream])
+  }, [stream, isMiniMode])
 
   useEffect(() => {
     if (miniVideoRef.current && stream) {
@@ -70,15 +70,16 @@ export default function Main() {
                   : 'border-[#FFC107] shadow-[#FFC107]/20'
           }`}
         >
-          {stream && isTracking && !isPaused ? (
+          {stream && (
             <video
               ref={miniVideoRef}
               autoPlay
               playsInline
               muted
-              className="absolute inset-0 w-full h-full object-cover scale-x-[-1]"
+              className={`absolute inset-0 w-full h-full object-cover scale-x-[-1] transition-opacity duration-300 ${isTracking && !isPaused ? 'opacity-100' : 'opacity-0'}`}
             />
-          ) : (
+          )}
+          {(!isTracking || isPaused) && (
             <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-700">
               <Camera
                 size={36}
@@ -198,11 +199,7 @@ export default function Main() {
 
           {(!isTracking || isPaused) && (
             <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-700">
-              <Camera
-                size={64}
-                strokeWidth={1.5}
-                className="mb-4 opacity-20"
-              />
+              <Camera size={64} strokeWidth={1.5} className="mb-4 opacity-20" />
               <span className="text-sm font-bold tracking-widest opacity-20">
                 {isPaused ? 'PAUSED' : 'CAMERA OFF'}
               </span>
