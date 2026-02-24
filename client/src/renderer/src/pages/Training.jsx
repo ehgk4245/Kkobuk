@@ -8,6 +8,10 @@ import { useWebcam } from '../context/WebcamContext'
 const PREPARE_SECONDS = 5
 const COLLECT_SECONDS = 60
 const LABEL = { good: 0, bad: 1 }
+const SAMPLE_INTERVAL_MS = 200
+
+const LANDMARK_IDX = { nose: 0, leftEar: 7, rightEar: 8, leftShoulder: 11, rightShoulder: 12 }
+const pickXYZ = ({ x, y, z }) => ({ x, y, z })
 
 const WASM_URL = '/mediapipe-wasm'
 const MODEL_URL = '/mediapipe-wasm/pose_landmarker_lite.task'
@@ -84,9 +88,11 @@ export default function Training() {
     const sessionSamples = []
     const startTime = performance.now()
     const duration = COLLECT_SECONDS * 1000
+    let lastSampleTime = 0
 
     const collect = () => {
-      const elapsed = performance.now() - startTime
+      const now = performance.now()
+      const elapsed = now - startTime
       setElapsedSec(Math.min(Math.floor(elapsed / 1000), COLLECT_SECONDS))
 
       if (elapsed >= duration) {
@@ -104,19 +110,20 @@ export default function Training() {
 
       const video = videoRef.current
       const lm = poseLandmarkerRef.current
-      if (video && lm && video.readyState >= 2) {
+      if (video && lm && video.readyState >= 2 && now - lastSampleTime >= SAMPLE_INTERVAL_MS) {
         try {
-          const results = lm.detectForVideo(video, performance.now())
+          const results = lm.detectForVideo(video, now)
           if (results.landmarks?.[0]) {
+            const pts = results.landmarks[0]
             sessionSamples.push({
               label,
-              landmarks: results.landmarks[0].map(({ x, y, z, visibility }) => ({
-                x,
-                y,
-                z,
-                visibility
-              }))
+              nose: pickXYZ(pts[LANDMARK_IDX.nose]),
+              leftEar: pickXYZ(pts[LANDMARK_IDX.leftEar]),
+              rightEar: pickXYZ(pts[LANDMARK_IDX.rightEar]),
+              leftShoulder: pickXYZ(pts[LANDMARK_IDX.leftShoulder]),
+              rightShoulder: pickXYZ(pts[LANDMARK_IDX.rightShoulder])
             })
+            lastSampleTime = now
             setFrameCount(sessionSamples.length)
           }
         } catch {} // eslint-disable-line no-empty
