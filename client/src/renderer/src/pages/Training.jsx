@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { PoseLandmarker, FilesetResolver } from '@mediapipe/tasks-vision'
+import { PoseLandmarker, FaceLandmarker, FilesetResolver } from '@mediapipe/tasks-vision'
 import { Camera, CheckCircle, AlertTriangle, ArrowRight, Loader2 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import logo from '../../../../resources/icon.png'
@@ -10,17 +10,20 @@ const COLLECT_SECONDS = 60
 const LABEL = { good: 0, bad: 1 }
 const SAMPLE_INTERVAL_MS = 200
 
-const LANDMARK_IDX = { nose: 0, leftEar: 7, rightEar: 8, leftShoulder: 11, rightShoulder: 12 }
+const POSE_IDX = { leftShoulder: 11, rightShoulder: 12 }
+const FACE_IDX = { nose: 4, chin: 152, leftEar: 234, rightEar: 454 }
 const pickXYZ = ({ x, y, z }) => ({ x, y, z })
 
 const WASM_URL = '/mediapipe-wasm'
-const MODEL_URL = '/mediapipe-wasm/pose_landmarker_lite.task'
+const POSE_MODEL_URL = '/mediapipe-wasm/pose_landmarker_lite.task'
+const FACE_MODEL_URL = '/mediapipe-wasm/face_landmarker.task'
 
 export default function Training() {
   const navigate = useNavigate()
   const { stream } = useWebcam()
   const videoRef = useRef(null)
   const poseLandmarkerRef = useRef(null)
+  const faceLandmarkerRef = useRef(null)
   const animFrameRef = useRef(null)
   const prepTimerRef = useRef(null)
   const allSamplesRef = useRef([])
@@ -47,13 +50,21 @@ export default function Training() {
     ;(async () => {
       try {
         const vision = await FilesetResolver.forVisionTasks(WASM_URL)
-        const lm = await PoseLandmarker.createFromOptions(vision, {
-          baseOptions: { modelAssetPath: MODEL_URL, delegate: 'GPU' },
-          runningMode: 'VIDEO',
-          numPoses: 1
-        })
+        const [pose, face] = await Promise.all([
+          PoseLandmarker.createFromOptions(vision, {
+            baseOptions: { modelAssetPath: POSE_MODEL_URL, delegate: 'GPU' },
+            runningMode: 'VIDEO',
+            numPoses: 1
+          }),
+          FaceLandmarker.createFromOptions(vision, {
+            baseOptions: { modelAssetPath: FACE_MODEL_URL, delegate: 'GPU' },
+            runningMode: 'VIDEO',
+            numFaces: 1
+          })
+        ])
         if (!cancelled) {
-          poseLandmarkerRef.current = lm
+          poseLandmarkerRef.current = pose
+          faceLandmarkerRef.current = face
           setMpReady(true)
         }
       } catch (err) {
@@ -109,19 +120,29 @@ export default function Training() {
       }
 
       const video = videoRef.current
-      const lm = poseLandmarkerRef.current
-      if (video && lm && video.readyState >= 2 && now - lastSampleTime >= SAMPLE_INTERVAL_MS) {
+      const pose = poseLandmarkerRef.current
+      const face = faceLandmarkerRef.current
+      if (
+        video &&
+        pose &&
+        face &&
+        video.readyState >= 2 &&
+        now - lastSampleTime >= SAMPLE_INTERVAL_MS
+      ) {
         try {
-          const results = lm.detectForVideo(video, now)
-          if (results.landmarks?.[0]) {
-            const pts = results.landmarks[0]
+          const poseResults = pose.detectForVideo(video, now)
+          const faceResults = face.detectForVideo(video, now)
+          const posePts = poseResults.landmarks?.[0]
+          const facePts = faceResults.faceLandmarks?.[0]
+          if (posePts && facePts) {
             sessionSamples.push({
               label,
-              nose: pickXYZ(pts[LANDMARK_IDX.nose]),
-              leftEar: pickXYZ(pts[LANDMARK_IDX.leftEar]),
-              rightEar: pickXYZ(pts[LANDMARK_IDX.rightEar]),
-              leftShoulder: pickXYZ(pts[LANDMARK_IDX.leftShoulder]),
-              rightShoulder: pickXYZ(pts[LANDMARK_IDX.rightShoulder])
+              nose: pickXYZ(facePts[FACE_IDX.nose]),
+              chin: pickXYZ(facePts[FACE_IDX.chin]),
+              leftEar: pickXYZ(facePts[FACE_IDX.leftEar]),
+              rightEar: pickXYZ(facePts[FACE_IDX.rightEar]),
+              leftShoulder: pickXYZ(posePts[POSE_IDX.leftShoulder]),
+              rightShoulder: pickXYZ(posePts[POSE_IDX.rightShoulder])
             })
             lastSampleTime = now
             setFrameCount(sessionSamples.length)
