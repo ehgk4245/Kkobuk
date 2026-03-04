@@ -4,13 +4,13 @@ services:
     container_name: kkobuk-mysql
     environment:
       MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: kkobuk
       MYSQL_USER: kkobuk
       MYSQL_PASSWORD: kkobuk
     ports:
       - "3306:3306"
     volumes:
       - mysql-data:/var/lib/mysql
+      - ./mysql/init.sql:/docker-entrypoint-initdb.d/init.sql
     restart: unless-stopped
 
   redis:

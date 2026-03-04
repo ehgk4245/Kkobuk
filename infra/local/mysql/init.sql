@@ -1,0 +1,6 @@
+CREATE DATABASE IF NOT EXISTS kkobuk CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE IF NOT EXISTS kkobuk_ai CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+GRANT ALL PRIVILEGES ON kkobuk.* TO 'kkobuk'@'%';
+GRANT ALL PRIVILEGES ON kkobuk_ai.* TO 'kkobuk'@'%';
+FLUSH PRIVILEGES;
