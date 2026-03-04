@@ -1,0 +1,23 @@
+# AWS
+aws_region     = "ap-northeast-2"
+aws_access_key = "YOUR_AWS_ACCESS_KEY"
+aws_secret_key = "YOUR_AWS_SECRET_KEY"
+
+# EC2
+ec2_key_pair      = "kkobuk-key"
+ec2_instance_type = "t4g.micro"
+
+# RDS
+rds_username       = "kkobuk"
+rds_password       = "YOUR_RDS_PASSWORD"
+rds_instance_class = "db.t4g.micro"
+
+# Redis
+redis_password = "YOUR_REDIS_PASSWORD"
+
+# S3
+s3_bucket_name = "kkobuk-storage"
+
+# Domain
+domain_api = "api.kkobuk.site"
+domain_ai  = "ai.kkobuk.site"

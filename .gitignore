@@ -21,3 +21,11 @@ logs/
 
 # Windows image file caches
 ehthumbs.db
+
+# Terraform
+*.tfvars
+!*.tfvars.example
+.terraform/
+.terraform.lock.hcl
+*.tfstate
+*.tfstate.backup

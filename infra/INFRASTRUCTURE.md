@@ -92,13 +92,25 @@ AWS 리소스(EC2, RDS, S3, Lambda, 보안 그룹 등)는 Terraform으로 코드
 infra/
   terraform/
     main.tf
-    variables.tf
+    variables.tf              # 변수 선언
     outputs.tf
+    terraform.tfvars          # 실제 값 (.gitignore)
+    terraform.tfvars.example  # 커밋용 예시
     modules/
       ec2/
       rds/
       s3/
       lambda/
+```
+
+**사용법:**
+```bash
+cd infra/terraform
+cp terraform.tfvars.example terraform.tfvars
+# terraform.tfvars에 실제 값 입력 후
+terraform init
+terraform plan
+terraform apply
 ```
 
 ---
