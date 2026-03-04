@@ -5,12 +5,12 @@
 ```
 [Electron 클라이언트]
         │
-        ├──── HTTPS ────▶ [EC2 #1] Nginx (블루그린)
+        ├──── HTTPS ────▶ api.kkobuk.site [EC2 #1] Nginx (블루그린)
         │                     └── Spring Boot REST API + Redis
         │                              │
         │                              └──── [RDS] kkobuk DB
         │
-        ├──── HTTPS ────▶ [EC2 #2] Nginx (블루그린)
+        ├──── HTTPS ────▶ ai.kkobuk.site  [EC2 #2] Nginx (블루그린)
         │                     └── FastAPI
         │                          ├── REST API (메타데이터 조회/수정)
         │                          └── WebSocket (실시간 자세 추론)
@@ -18,7 +18,7 @@
         │                                   ├──── [RDS] kkobuk_ai DB
         │                                   └──── [S3] 모델 로드 (메모리 캐시)
         │
-        └──── WSS ───────▶ [EC2 #2] (동일 서버, WebSocket 엔드포인트)
+        └──── WSS ───────▶ ai.kkobuk.site [EC2 #2] (동일 서버, WebSocket 엔드포인트)
 
 [Lambda] 학습 요청 수신
     └── 전처리 → LR 학습 → [S3] 모델 저장
@@ -33,6 +33,7 @@
 
 | 항목 | 내용 |
 |------|------|
+| 도메인 | `api.kkobuk.site` |
 | 애플리케이션 | Spring Boot 4.0.2 + Java 25 |
 | 캐시 | Redis (로컬, 리프레시 토큰 저장) |
 | 리버스 프록시 | Nginx |
@@ -43,6 +44,7 @@
 
 | 항목 | 내용 |
 |------|------|
+| 도메인 | `ai.kkobuk.site` |
 | 애플리케이션 | FastAPI (Python) |
 | 리버스 프록시 | Nginx |
 | 배포 전략 | 블루그린 배포 |
@@ -79,6 +81,60 @@
 3. Logistic Regression 학습
 4. 모델 S3 저장
 5. `kkobuk_ai` DB에 `trained_model_metadata` 레코드 생성
+
+---
+
+## 인프라 관리 — Terraform
+
+AWS 리소스(EC2, RDS, S3, Lambda, 보안 그룹 등)는 Terraform으로 코드로 관리
+
+```
+infra/
+  terraform/
+    main.tf
+    variables.tf
+    outputs.tf
+    modules/
+      ec2/
+      rds/
+      s3/
+      lambda/
+```
+
+---
+
+## CI/CD — GitHub Actions
+
+### EC2 #1 (Spring Boot)
+
+```
+main 브랜치 push
+  └── GitHub Actions
+        ├── ./gradlew build (테스트 + 빌드)
+        ├── Docker 이미지 빌드 & ECR 푸시
+        └── EC2 #1 SSH 접속
+              └── 비활성 환경(블루/그린)에 새 이미지 배포
+                    └── Nginx upstream 교체 (무중단)
+```
+
+### EC2 #2 (FastAPI)
+
+```
+main 브랜치 push
+  └── GitHub Actions
+        ├── Docker 이미지 빌드 & ECR 푸시
+        └── EC2 #2 SSH 접속
+              └── 비활성 환경(블루/그린)에 새 이미지 배포
+                    └── Nginx upstream 교체 (무중단)
+```
+
+### Lambda
+
+```
+main 브랜치 push
+  └── GitHub Actions
+        └── Lambda 함수 패키징 & 배포 (aws lambda update-function-code)
+```
 
 ---
 
