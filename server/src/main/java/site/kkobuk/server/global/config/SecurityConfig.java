@@ -37,7 +37,7 @@ public class SecurityConfig {
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/auth/reissue").permitAll()
+                        .requestMatchers("/auth/reissue", "/actuator/health").permitAll()
                         .requestMatchers("/**").authenticated()
                 )
 
