@@ -8,12 +8,14 @@ systemctl enable docker nginx
 systemctl start docker
 usermod -aG docker ubuntu
 
-# Redis (비밀번호 설정 + 재시작 시 자동 실행)
+docker network create kkobuk-net
+
 mkdir -p /data/redis
 docker run -d \
   --name redis \
+  --network kkobuk-net \
   --restart always \
-  -p 127.0.0.1:6379:6379 \
+  -p 6379:6379 \
   -v /data/redis:/data \
   redis:7-alpine \
   redis-server --requirepass "${redis_password}"
