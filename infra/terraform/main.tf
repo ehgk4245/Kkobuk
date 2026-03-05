@@ -370,16 +370,64 @@ resource "aws_ecr_repository" "api" {
   tags                 = { Name = "kkobuk-api" }
 }
 
+resource "aws_ecr_lifecycle_policy" "api" {
+  repository = aws_ecr_repository.api.name
+  policy = jsonencode({
+    rules = [{
+      rulePriority = 1
+      description  = "최근 5개 이미지만 유지"
+      selection = {
+        tagStatus   = "any"
+        countType   = "imageCountMoreThan"
+        countNumber = 5
+      }
+      action = { type = "expire" }
+    }]
+  })
+}
+
 resource "aws_ecr_repository" "ai" {
   name                 = "kkobuk-ai"
   image_tag_mutability = "MUTABLE"
   tags                 = { Name = "kkobuk-ai" }
 }
 
+resource "aws_ecr_lifecycle_policy" "ai" {
+  repository = aws_ecr_repository.ai.name
+  policy = jsonencode({
+    rules = [{
+      rulePriority = 1
+      description  = "최근 5개 이미지만 유지"
+      selection = {
+        tagStatus   = "any"
+        countType   = "imageCountMoreThan"
+        countNumber = 5
+      }
+      action = { type = "expire" }
+    }]
+  })
+}
+
 resource "aws_ecr_repository" "lambda" {
   name                 = "kkobuk-lambda"
   image_tag_mutability = "MUTABLE"
   tags                 = { Name = "kkobuk-lambda" }
+}
+
+resource "aws_ecr_lifecycle_policy" "lambda" {
+  repository = aws_ecr_repository.lambda.name
+  policy = jsonencode({
+    rules = [{
+      rulePriority = 1
+      description  = "최근 5개 이미지만 유지"
+      selection = {
+        tagStatus   = "any"
+        countType   = "imageCountMoreThan"
+        countNumber = 5
+      }
+      action = { type = "expire" }
+    }]
+  })
 }
 
 # ============================================================
@@ -396,7 +444,7 @@ resource "aws_lambda_function" "training" {
   memory_size   = 512
 
   lifecycle {
-    ignore_changes = [image_uri]
+    ignore_changes = [image_uri, environment]
   }
 
   vpc_config {
