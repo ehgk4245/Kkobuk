@@ -10,6 +10,7 @@ on:
 
 env:
   AWS_REGION: ${{ secrets.AWS_REGION }}
+  ECR_REPOSITORY: kkobuk-lambda
   FUNCTION_NAME: kkobuk-training
 
 jobs:
@@ -26,21 +27,26 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Package Lambda function
-        run: |
-          mkdir -p /tmp/lambda-package
-          # Lambda 핸들러 + shared 공통 모듈 번들링
-          cp -r ai/lambda/* /tmp/lambda-package/
-          cp -r ai/shared/ /tmp/lambda-package/shared/
-          # 의존성 설치
-          pip install -r ai/lambda/requirements.txt -t /tmp/lambda-package/ --quiet
-          cd /tmp/lambda-package && zip -r /tmp/lambda.zip .
+      - name: Login to ECR
+        id: ecr-login
+        uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Deploy to Lambda
+      - name: Build and push Docker image
+        id: build
+        run: |
+          IMAGE_URI=${{ steps.ecr-login.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
+          docker build \
+            -t $IMAGE_URI \
+            -f ai/lambda/Dockerfile \
+            ./ai
+          docker push $IMAGE_URI
+          echo "image_uri=$IMAGE_URI" >> $GITHUB_OUTPUT
+
+      - name: Update Lambda function image
         run: |
           aws lambda update-function-code \
             --function-name ${{ env.FUNCTION_NAME }} \
-            --zip-file fileb:///tmp/lambda.zip
+            --image-uri ${{ steps.build.outputs.image_uri }}
           aws lambda wait function-updated \
             --function-name ${{ env.FUNCTION_NAME }}
 

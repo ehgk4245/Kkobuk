@@ -4,10 +4,6 @@ terraform {
       source  = "hashicorp/aws"
       version = "~> 5.0"
     }
-    archive = {
-      source  = "hashicorp/archive"
-      version = "~> 2.0"
-    }
   }
 }
 
@@ -32,17 +28,6 @@ data "aws_ami" "ubuntu" {
   filter {
     name   = "architecture"
     values = ["arm64"]
-  }
-}
-
-# Lambda 초기 배포용 플레이스홀더 zip
-data "archive_file" "lambda_placeholder" {
-  type        = "zip"
-  output_path = "${path.module}/lambda_placeholder.zip"
-
-  source {
-    content  = "def handler(event, context): pass"
-    filename = "handler.py"
   }
 }
 
@@ -391,18 +376,28 @@ resource "aws_ecr_repository" "ai" {
   tags                 = { Name = "kkobuk-ai" }
 }
 
+resource "aws_ecr_repository" "lambda" {
+  name                 = "kkobuk-lambda"
+  image_tag_mutability = "MUTABLE"
+  tags                 = { Name = "kkobuk-lambda" }
+}
+
 # ============================================================
 # Lambda — 학습 파이프라인
 # ============================================================
 resource "aws_lambda_function" "training" {
-  function_name    = "kkobuk-training"
-  role             = aws_iam_role.lambda.arn
-  runtime          = "python3.11"
-  handler          = "handler.handler"
-  filename         = data.archive_file.lambda_placeholder.output_path
-  source_code_hash = data.archive_file.lambda_placeholder.output_base64sha256
-  timeout          = 300
-  memory_size      = 512
+  function_name = "kkobuk-training"
+  role          = aws_iam_role.lambda.arn
+  package_type  = "Image"
+  # GitHub Actions가 실제 이미지를 관리하므로 Terraform은 image_uri 변경 무시
+  image_uri     = "${aws_ecr_repository.lambda.repository_url}:placeholder"
+  architectures = ["x86_64"]
+  timeout       = 300
+  memory_size   = 512
+
+  lifecycle {
+    ignore_changes = [image_uri]
+  }
 
   vpc_config {
     subnet_ids         = [aws_subnet.private_a.id, aws_subnet.private_b.id]
