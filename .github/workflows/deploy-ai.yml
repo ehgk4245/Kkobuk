@@ -1,0 +1,75 @@
+name: Deploy AI Server
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'ai/**'
+      - '.github/workflows/deploy-ai.yml'
+      - '.github/scripts/blue-green-ai.sh'
+
+env:
+  AWS_REGION: ${{ secrets.AWS_REGION }}
+  ECR_REPOSITORY: kkobuk-ai
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to ECR
+        id: ecr-login
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: linux/arm64
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push Docker image (ARM64)
+        id: build
+        run: |
+          IMAGE_URI=${{ steps.ecr-login.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
+          docker buildx build \
+            --platform linux/arm64 \
+            --push \
+            -t $IMAGE_URI \
+            -f ai/fastapi/Dockerfile \
+            ./ai
+          echo "image_uri=$IMAGE_URI" >> $GITHUB_OUTPUT
+
+      - name: Write SSH key
+        run: |
+          echo "${{ secrets.EC2_SSH_KEY }}" > /tmp/deploy_key
+          chmod 600 /tmp/deploy_key
+
+      - name: Write .env file to EC2
+        run: |
+          ssh -i /tmp/deploy_key -o StrictHostKeyChecking=no ubuntu@${{ secrets.EC2_AI_HOST }} \
+            "cat > /etc/kkobuk/ai.env << 'ENVEOF'
+          AI_DATABASE_URL=${{ secrets.AI_DATABASE_URL }}
+          ENVEOF"
+
+      - name: Deploy (blue-green)
+        run: |
+          scp -i /tmp/deploy_key -o StrictHostKeyChecking=no \
+            .github/scripts/blue-green-ai.sh \
+            ubuntu@${{ secrets.EC2_AI_HOST }}:/tmp/blue-green-ai.sh
+
+          ssh -i /tmp/deploy_key -o StrictHostKeyChecking=no ubuntu@${{ secrets.EC2_AI_HOST }} \
+            "chmod +x /tmp/blue-green-ai.sh && /tmp/blue-green-ai.sh \
+              ${{ steps.build.outputs.image_uri }} \
+              ${{ steps.ecr-login.outputs.registry }} \
+              ${{ env.AWS_REGION }}"

@@ -1,0 +1,51 @@
+name: Deploy Lambda (Training Pipeline)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'ai/lambda/**'
+      - 'ai/shared/**'
+      - '.github/workflows/deploy-lambda.yml'
+
+env:
+  AWS_REGION: ${{ secrets.AWS_REGION }}
+  FUNCTION_NAME: kkobuk-training
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Package Lambda function
+        run: |
+          mkdir -p /tmp/lambda-package
+          # Lambda 핸들러 + shared 공통 모듈 번들링
+          cp -r ai/lambda/* /tmp/lambda-package/
+          cp -r ai/shared/ /tmp/lambda-package/shared/
+          # 의존성 설치
+          pip install -r ai/lambda/requirements.txt -t /tmp/lambda-package/ --quiet
+          cd /tmp/lambda-package && zip -r /tmp/lambda.zip .
+
+      - name: Deploy to Lambda
+        run: |
+          aws lambda update-function-code \
+            --function-name ${{ env.FUNCTION_NAME }} \
+            --zip-file fileb:///tmp/lambda.zip
+          aws lambda wait function-updated \
+            --function-name ${{ env.FUNCTION_NAME }}
+
+      - name: Update Lambda environment variables
+        run: |
+          aws lambda update-function-configuration \
+            --function-name ${{ env.FUNCTION_NAME }} \
+            --environment "Variables={AI_DATABASE_URL=${{ secrets.AI_DATABASE_URL }},S3_BUCKET_NAME=${{ secrets.S3_BUCKET_NAME }}}"
