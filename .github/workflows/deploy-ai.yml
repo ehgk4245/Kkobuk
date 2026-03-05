@@ -61,6 +61,8 @@ jobs:
             "cat > /etc/kkobuk/ai.env << 'ENVEOF'
           AI_DATABASE_URL=${{ secrets.AI_DATABASE_URL }}
           JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }}
+          REDIS_HOST=${{ secrets.EC2_API_PRIVATE_IP }}
+          REDIS_PASSWORD=${{ secrets.REDIS_PASSWORD }}
           ENVEOF"
 
       - name: Deploy (blue-green)
