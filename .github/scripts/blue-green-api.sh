@@ -41,6 +41,7 @@ docker run -d \
   --name kkobuk-api-$NEXT \
   --env-file $ENV_FILE \
   --restart unless-stopped \
+  --add-host=host.docker.internal:host-gateway \
   -p 127.0.0.1:$NEXT_PORT:8080 \
   $IMAGE_URI
 
