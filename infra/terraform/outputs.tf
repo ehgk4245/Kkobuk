@@ -1,11 +1,11 @@
 output "ec2_api_public_ip" {
-  description = "EC2 API 서버 공인 IP (GitHub Actions Secrets: EC2_API_HOST)"
-  value       = aws_instance.api.public_ip
+  description = "EC2 API 서버 Elastic IP (GitHub Actions Secrets: EC2_API_HOST)"
+  value       = aws_eip.api.public_ip
 }
 
 output "ec2_ai_public_ip" {
-  description = "EC2 AI 서버 공인 IP (GitHub Actions Secrets: EC2_AI_HOST)"
-  value       = aws_instance.ai.public_ip
+  description = "EC2 AI 서버 Elastic IP (GitHub Actions Secrets: EC2_AI_HOST)"
+  value       = aws_eip.ai.public_ip
 }
 
 output "rds_endpoint" {
@@ -31,4 +31,9 @@ output "s3_bucket" {
 output "ecr_lambda_url" {
   description = "ECR Lambda 레포지토리 URL"
   value       = aws_ecr_repository.lambda.repository_url
+}
+
+output "ec2_api_private_ip" {
+  description = "API EC2 사설 IP (GitHub Actions Secrets: EC2_API_PRIVATE_IP) — FastAPI/Lambda의 Redis 호스트"
+  value       = aws_instance.api.private_ip
 }

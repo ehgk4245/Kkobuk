@@ -129,6 +129,12 @@ resource "aws_security_group" "ec2_api" {
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
+  ingress {
+    from_port       = 6379
+    to_port         = 6379
+    protocol        = "tcp"
+    security_groups = [aws_security_group.ec2_ai.id, aws_security_group.lambda.id]
+  }
   egress {
     from_port   = 0
     to_port     = 0
@@ -459,4 +465,19 @@ resource "aws_lambda_function" "training" {
   }
 
   tags = { Name = "kkobuk-training" }
+}
+
+# ============================================================
+# Elastic IP — API / AI 서버 (공인 IP 고정)
+# ============================================================
+resource "aws_eip" "api" {
+  instance = aws_instance.api.id
+  domain   = "vpc"
+  tags     = { Name = "kkobuk-api-eip" }
+}
+
+resource "aws_eip" "ai" {
+  instance = aws_instance.ai.id
+  domain   = "vpc"
+  tags     = { Name = "kkobuk-ai-eip" }
 }
