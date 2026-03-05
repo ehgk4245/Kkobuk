@@ -54,4 +54,4 @@ jobs:
         run: |
           aws lambda update-function-configuration \
             --function-name ${{ env.FUNCTION_NAME }} \
-            --environment "Variables={AI_DATABASE_URL=${{ secrets.AI_DATABASE_URL }},S3_BUCKET_NAME=${{ secrets.S3_BUCKET_NAME }}}"
+            --environment "Variables={AI_DATABASE_URL=${{ secrets.AI_DATABASE_URL }},S3_BUCKET_NAME=${{ secrets.S3_BUCKET_NAME }},JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }}}"
