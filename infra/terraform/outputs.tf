@@ -27,3 +27,8 @@ output "s3_bucket" {
   description = "S3 버킷 이름"
   value       = aws_s3_bucket.storage.bucket
 }
+
+output "ecr_lambda_url" {
+  description = "ECR Lambda 레포지토리 URL"
+  value       = aws_ecr_repository.lambda.repository_url
+}
