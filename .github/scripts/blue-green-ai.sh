@@ -68,8 +68,8 @@ upstream ai_upstream {
 EOF
 sudo nginx -t && sudo nginx -s reload
 
-# 활성 환경 업데이트
-echo $NEXT > $ACTIVE_ENV_FILE
+# 활성 환경 업데이트 (파일이 root 소유일 수 있으므로 삭제 후 재생성)
+rm -f $ACTIVE_ENV_FILE && echo $NEXT > $ACTIVE_ENV_FILE
 
 # 이전 컨테이너 중지
 docker stop kkobuk-ai-$CURRENT 2>/dev/null || true
