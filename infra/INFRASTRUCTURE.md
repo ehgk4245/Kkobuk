@@ -91,16 +91,14 @@ AWS 리소스(EC2, RDS, S3, Lambda, 보안 그룹 등)는 Terraform으로 코드
 ```
 infra/
   terraform/
-    main.tf
+    main.tf                   # 전체 리소스 정의 (VPC, EC2, RDS, S3, ECR)
     variables.tf              # 변수 선언
-    outputs.tf
+    outputs.tf                # EC2 IP, RDS 엔드포인트, ECR URL 출력
     terraform.tfvars          # 실제 값 (.gitignore)
     terraform.tfvars.example  # 커밋용 예시
-    modules/
-      ec2/
-      rds/
-      s3/
-      lambda/
+    user_data/
+      api_server.sh           # EC2 #1 초기화 (Docker, Redis, Nginx)
+      ai_server.sh            # EC2 #2 초기화 (Docker, Nginx)
 ```
 
 **사용법:**
