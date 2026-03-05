@@ -1,0 +1,7 @@
+research/
+.venv/
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+.idea/
+.git/
