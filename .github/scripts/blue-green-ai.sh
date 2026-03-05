@@ -75,4 +75,7 @@ rm -f $ACTIVE_ENV_FILE && echo $NEXT > $ACTIVE_ENV_FILE
 docker stop kkobuk-ai-$CURRENT 2>/dev/null || true
 docker rm kkobuk-ai-$CURRENT 2>/dev/null || true
 
+# 미사용 이미지 정리 (실행 중인 컨테이너 이미지는 유지)
+docker image prune -af
+
 echo "배포 완료: $NEXT ($NEXT_PORT) 활성화"
