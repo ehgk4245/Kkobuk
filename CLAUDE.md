@@ -7,7 +7,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **Kkobuk**는 자세 교정 데스크탑 애플리케이션으로, 네 개의 모듈로 구성됩니다:
 - `server/` — Spring Boot 4.0.2 + Java 25 백엔드 (OAuth2 + JWT 인증) → `api.kkobuk.site`
 - `client/` — Electron 39 + React 19 + Vite 데스크탑 프론트엔드
-- `ai/` — FastAPI 기반 AI 추론 서비스 (실시간 자세 추론, 모델/학습데이터 메타데이터 관리) → `ai.kkobuk.site`
+- `ai/` — AI 관련 코드 전체
+  - `ai/fastapi/` — FastAPI 기반 AI 추론 서비스 (실시간 자세 추론, 모델/학습데이터 메타데이터 관리) → `ai.kkobuk.site`
+  - `ai/lambda/` — 학습 파이프라인 Lambda 함수 (전처리 → 모델 학습 → S3 저장 → DB 기록)
+  - `ai/shared/` — FastAPI/Lambda 공통 모듈 (JWT 검증, 전처리 로직)
 - `infra/` — AWS 인프라 설계 문서 및 Terraform IaC
 
 ## Commands
@@ -88,21 +91,30 @@ docker-compose down     # 컨테이너 종료
 ### AI Service — 구조
 
 ```
-ai/fastapi/
-  main.py          # FastAPI 인스턴스, 라우터 등록
-  requirements.txt
-  app/
-    api/           # 엔드포인트 (APIRouter)
-    core/
-      database.py  # SQLAlchemy 엔진/세션, AI_DATABASE_URL 환경변수
-    models/
-      ai_metadata.py  # TrainingDataMetadata, TrainedModelMetadata, ModelStatus ENUM
-    services/      # 비즈니스 로직 (추론 등)
+ai/
+  fastapi/
+    main.py          # FastAPI 인스턴스, 라우터 등록
+    requirements.txt
+    app/
+      api/           # 엔드포인트 (APIRouter)
+      core/
+        database.py  # SQLAlchemy 엔진/세션, AI_DATABASE_URL 환경변수
+      models/
+        ai_metadata.py  # TrainingDataMetadata, TrainedModelMetadata, ModelStatus ENUM
+      services/      # 비즈니스 로직 (추론 등)
+  lambda/
+    handler.py       # Lambda 핸들러 (학습 파이프라인)
+    requirements.txt
+  shared/
+    auth.py          # JWT 검증 공통 모듈 (FastAPI/Lambda 공용, PyJWT)
+    preprocessing_V1.py
+    preprocessing_V2.py
 ```
 
 - AI 서비스 전용 RDB (RDS 내 별도 DB `kkobuk_ai`) 사용
 - 학습 데이터 및 모델 파일은 S3 저장, 메타데이터만 RDB 관리
 - `ModelStatus`: `ACTIVE`(선택된 모델) / `INACTIVE`
+- `ai/shared/auth.py` — Spring Boot의 JWT 시크릿 키를 공유해 동일 알고리즘(HS256/384/512)으로 검증
 
 ### Client — 구조
 
@@ -137,6 +149,9 @@ JWT_SECRET_KEY=
 `ai/fastapi`의 환경변수:
 ```
 AI_DATABASE_URL=mysql+pymysql://user:password@host:3306/kkobuk_ai
+JWT_SECRET_KEY=
+REDIS_HOST=          # API EC2 사설 IP
+REDIS_PASSWORD=
 ```
 
 `server/src/main/resources/application.yml` — DB(MySQL localhost:3306/kkobuk), Redis(localhost:6379), JPA DDL auto-update 설정 포함

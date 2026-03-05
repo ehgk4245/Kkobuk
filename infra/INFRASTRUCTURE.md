@@ -5,12 +5,12 @@
 ```
 [Electron 클라이언트]
         │
-        ├──── HTTPS ────▶ api.kkobuk.site [EC2 #1] Nginx (블루그린)
-        │                     └── Spring Boot REST API + Redis
-        │                              │
+        ├──── HTTPS ────▶ api.kkobuk.site [EC2 #1] Nginx (블루그린)  ← Elastic IP 고정
+        │                     └── Spring Boot REST API
+        │                              ├── Redis (Docker: kkobuk-net)
         │                              └──── [RDS] kkobuk DB
         │
-        ├──── HTTPS ────▶ ai.kkobuk.site  [EC2 #2] Nginx (블루그린)
+        ├──── HTTPS ────▶ ai.kkobuk.site  [EC2 #2] Nginx (블루그린)  ← Elastic IP 고정
         │                     └── FastAPI
         │                          ├── REST API (메타데이터 조회/수정)
         │                          └── WebSocket (실시간 자세 추론)
@@ -18,11 +18,15 @@
         │                                   ├──── [RDS] kkobuk_ai DB
         │                                   └──── [S3] 모델 로드 (메모리 캐시)
         │
-        └──── WSS ───────▶ ai.kkobuk.site [EC2 #2] (동일 서버, WebSocket 엔드포인트)
+        ├──── WSS ───────▶ ai.kkobuk.site [EC2 #2] (동일 서버, WebSocket 엔드포인트)
+        │
+        └──── Function URL ▶ [Lambda] 학습 파이프라인
+                                  └── 전처리 → OneClassSVM 학습 → [S3] 모델 저장
+                                                    └──── [RDS] kkobuk_ai DB 메타데이터 기록
 
-[Lambda] 학습 요청 수신
-    └── 전처리 → LR 학습 → [S3] 모델 저장
-                               └──── [S3] 학습 데이터
+# Redis VPC 내부 접근 (사설 IP, 6379 포트)
+EC2 #2 (FastAPI) ──────▶ Redis (EC2 #1, 사설 IP:6379)
+Lambda           ──────▶ Redis (EC2 #1, 사설 IP:6379)
 ```
 
 ---
@@ -35,10 +39,15 @@
 |------|------|
 | 도메인 | `api.kkobuk.site` |
 | 애플리케이션 | Spring Boot 4.0.2 + Java 25 |
-| 캐시 | Redis (로컬, 리프레시 토큰 저장) |
+| 캐시 | Redis 7 (Docker 컨테이너, `kkobuk-net` 네트워크) |
 | 리버스 프록시 | Nginx |
 | 배포 전략 | 블루그린 배포 |
-| 보안 | HTTPS (Nginx SSL 종료) |
+| 보안 | HTTPS (Nginx SSL 종료), Elastic IP 고정 |
+
+**Redis 접근 구조**
+- Spring Boot 컨테이너 → Redis: Docker 네트워크(`kkobuk-net`) 내부 통신 (`redis:6379`)
+- FastAPI(EC2 #2), Lambda → Redis: VPC 사설 IP (`EC2_API_PRIVATE_IP:6379`)
+- 보안그룹: 6379 인바운드를 `ec2_ai` SG, `lambda` SG만 허용
 
 ### EC2 #2 — AI 서버
 
@@ -48,7 +57,7 @@
 | 애플리케이션 | FastAPI (Python) |
 | 리버스 프록시 | Nginx |
 | 배포 전략 | 블루그린 배포 |
-| 보안 | HTTPS / WSS (Nginx SSL 종료) |
+| 보안 | HTTPS / WSS (Nginx SSL 종료), Elastic IP 고정 |
 
 **프로토콜 분리**
 
@@ -76,11 +85,15 @@
 
 ### Lambda — 학습 파이프라인
 
-1. 학습 데이터(~600개) 수신
-2. 전처리
-3. Logistic Regression 학습
-4. 모델 S3 저장
-5. `kkobuk_ai` DB에 `trained_model_metadata` 레코드 생성
+- **트리거**: Electron 클라이언트가 Lambda Function URL로 직접 호출
+- **JWT 검증**: `ai/shared/auth.py`로 토큰 유효성 확인 (Spring Boot와 동일 시크릿 공유)
+
+1. JWT 검증 (사용자 인증)
+2. 세션 데이터 수신 (~600개)
+3. 전처리 (`ai/shared/preprocessing_*.py`)
+4. Logistic Regression 학습
+5. 모델 S3 저장, 학습 데이터 S3 저장
+6. `kkobuk_ai` DB에 `trained_model_metadata` 레코드 생성
 
 ---
 
@@ -91,15 +104,17 @@ AWS 리소스(EC2, RDS, S3, Lambda, 보안 그룹 등)는 Terraform으로 코드
 ```
 infra/
   terraform/
-    main.tf                   # 전체 리소스 정의 (VPC, EC2, RDS, S3, ECR)
+    main.tf                   # 전체 리소스 정의 (VPC, EC2, RDS, S3, ECR, Lambda, EIP)
     variables.tf              # 변수 선언
-    outputs.tf                # EC2 IP, RDS 엔드포인트, ECR URL 출력
+    outputs.tf                # EC2 EIP, RDS 엔드포인트, ECR URL 출력
     terraform.tfvars          # 실제 값 (.gitignore)
     terraform.tfvars.example  # 커밋용 예시
     user_data/
       api_server.sh           # EC2 #1 초기화 (Docker, Redis, Nginx)
       ai_server.sh            # EC2 #2 초기화 (Docker, Nginx)
 ```
+
+**ECR 수명주기 정책**: 리포지토리(api/ai/lambda)별 최근 5개 이미지만 유지, 오래된 이미지 자동 삭제
 
 **사용법:**
 ```bash
@@ -141,9 +156,11 @@ main 브랜치 push
 ### Lambda
 
 ```
-main 브랜치 push
+main 브랜치 push (ai/lambda/**, ai/shared/**)
   └── GitHub Actions
-        └── Lambda 함수 패키징 & 배포 (aws lambda update-function-code)
+        ├── Docker 이미지 빌드 & ECR 푸시
+        ├── aws lambda update-function-code (새 이미지 반영)
+        └── aws lambda update-function-configuration (환경변수 갱신)
 ```
 
 ---
