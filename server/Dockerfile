@@ -1,7 +1,7 @@
 FROM eclipse-temurin:25-jdk-noble AS builder
 WORKDIR /build
 COPY . .
-RUN ./gradlew build -x test --no-daemon
+RUN chmod +x gradlew && ./gradlew build -x test --no-daemon
 
 FROM eclipse-temurin:25-jre-noble
 WORKDIR /app
