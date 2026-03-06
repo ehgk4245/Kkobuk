@@ -33,6 +33,13 @@ jobs:
         run: npm install
         working-directory: client
 
+      - name: Set version from tag
+        shell: bash
+        run: |
+          VERSION=$(echo "${{ github.ref_name }}" | sed 's/^v//' | sed 's/-.*//')
+          npm version $VERSION --no-git-tag-version
+        working-directory: client
+
       - name: Build Windows
         run: npm run build:win
         working-directory: client
@@ -67,6 +74,12 @@ jobs:
         run: npm install
         working-directory: client
 
+      - name: Set version from tag
+        run: |
+          VERSION=$(echo "${{ github.ref_name }}" | sed 's/^v//' | sed 's/-.*//')
+          npm version $VERSION --no-git-tag-version
+        working-directory: client
+
       - name: Build Mac
         run: npm run build:mac
         working-directory: client
@@ -92,7 +105,7 @@ jobs:
       - name: Update download links in README.md
         run: |
           TAG=${{ github.ref_name }}
-          VERSION=$(node -p "require('./client/package.json').version")
+          VERSION=$(echo "$TAG" | sed 's/^v//' | sed 's/-.*//')
 
           # GitHub Release URL의 태그 부분 교체
           sed -i "s|/releases/download/v[^/]*/|/releases/download/$TAG/|g" README.md
