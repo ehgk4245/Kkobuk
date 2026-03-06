@@ -1,0 +1,80 @@
+name: Build Client
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Cache mediapipe models
+        uses: actions/cache@v4
+        with:
+          path: client/src/renderer/public/mediapipe-wasm
+          key: mediapipe-${{ hashFiles('client/scripts/setup-mediapipe.mjs') }}
+
+      - name: Write .env
+        run: echo "VITE_API_BASE_URL=${{ secrets.VITE_API_BASE_URL }}" > client/.env
+        shell: bash
+
+      - name: Install dependencies
+        run: npm install
+        working-directory: client
+
+      - name: Build Windows
+        run: npm run build:win
+        working-directory: client
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload Windows installer to Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: client/dist/*.exe
+
+  build-mac:
+    runs-on: macos-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Cache mediapipe models
+        uses: actions/cache@v4
+        with:
+          path: client/src/renderer/public/mediapipe-wasm
+          key: mediapipe-${{ hashFiles('client/scripts/setup-mediapipe.mjs') }}
+
+      - name: Write .env
+        run: echo "VITE_API_BASE_URL=${{ secrets.VITE_API_BASE_URL }}" > client/.env
+
+      - name: Install dependencies
+        run: npm install
+        working-directory: client
+
+      - name: Build Mac
+        run: npm run build:mac
+        working-directory: client
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+
+      - name: Upload Mac installer to Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: client/dist/*.dmg
