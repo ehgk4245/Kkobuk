@@ -1,4 +1,4 @@
-import { app, shell, BrowserWindow, ipcMain, Tray, Menu, nativeImage } from 'electron'
+import { app, shell, BrowserWindow, ipcMain, Tray, Menu, nativeImage, session } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
@@ -74,6 +74,17 @@ function createWindow() {
 }
 
 app.whenReady().then(() => {
+  // 프로덕션에서 file:// 페이지는 Origin: null을 보내므로, API 요청에 명시적 Origin 주입
+  if (!is.dev && API_BASE) {
+    session.defaultSession.webRequest.onBeforeSendHeaders(
+      { urls: [`${API_BASE}/*`] },
+      (details, callback) => {
+        details.requestHeaders['Origin'] = 'app://kkobuk'
+        callback({ requestHeaders: details.requestHeaders })
+      }
+    )
+  }
+
   // Windows 개발 모드: electron.exe가 앱 경로 없이 URL만 받는 문제 방지
   if (is.dev) {
     app.setAsDefaultProtocolClient(PROTOCOL, process.execPath, [app.getAppPath()])
