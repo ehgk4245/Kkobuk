@@ -78,3 +78,33 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: client/dist/*.dmg
+
+  update-readme:
+    needs: [build-windows, build-mac]
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update download links in README.md
+        run: |
+          TAG=${{ github.ref_name }}
+          VERSION=$(node -p "require('./client/package.json').version")
+
+          # GitHub Release URL의 태그 부분 교체
+          sed -i "s|/releases/download/v[^/]*/|/releases/download/$TAG/|g" README.md
+
+          # 파일명의 버전 부분 교체
+          sed -i "s|kkobuk-[0-9][0-9.]*-setup\.exe|kkobuk-$VERSION-setup.exe|g" README.md
+          sed -i "s|kkobuk-[0-9][0-9.]*\.dmg|kkobuk-$VERSION.dmg|g" README.md
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add README.md
+          git diff --staged --quiet || git commit -m "chore: update download links to ${{ github.ref_name }}"
+          git push origin main
