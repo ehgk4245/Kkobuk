@@ -14,9 +14,9 @@ const POSE_IDX = { leftShoulder: 11, rightShoulder: 12 }
 const FACE_IDX = { nose: 4, chin: 152, leftEar: 234, rightEar: 454 }
 const pickXYZ = ({ x, y, z }) => ({ x, y, z })
 
-const WASM_URL = '/mediapipe-wasm'
-const POSE_MODEL_URL = '/mediapipe-wasm/pose_landmarker_lite.task'
-const FACE_MODEL_URL = '/mediapipe-wasm/face_landmarker.task'
+const WASM_URL = './mediapipe-wasm'
+const POSE_MODEL_URL = './mediapipe-wasm/pose_landmarker_lite.task'
+const FACE_MODEL_URL = './mediapipe-wasm/face_landmarker.task'
 
 export default function Training() {
   const navigate = useNavigate()
