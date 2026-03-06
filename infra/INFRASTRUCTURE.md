@@ -18,15 +18,13 @@
         │                                   ├──── [RDS] kkobuk_ai DB
         │                                   └──── [S3] 모델 로드 (메모리 캐시)
         │
-        ├──── WSS ───────▶ ai.kkobuk.site [EC2 #2] (동일 서버, WebSocket 엔드포인트)
-        │
-        └──── Function URL ▶ [Lambda] 학습 파이프라인
-                                  └── 전처리 → OneClassSVM 학습 → [S3] 모델 저장
-                                                    └──── [RDS] kkobuk_ai DB 메타데이터 기록
+        └──── WSS ───────▶ ai.kkobuk.site [EC2 #2] (동일 서버, WebSocket 엔드포인트)
 
-# Redis VPC 내부 접근 (사설 IP, 6379 포트)
-EC2 #2 (FastAPI) ──────▶ Redis (EC2 #1, 사설 IP:6379)
-Lambda           ──────▶ Redis (EC2 #1, 사설 IP:6379)
+Spring Boot REST API
+    └── AWS SDK InvokeAsync ──▶ [Lambda] 학습 파이프라인
+                                    ├── [S3] 학습 데이터 읽기 → 전처리 → LR 학습
+                                    ├── [S3] 모델 저장
+                                    └── [RDS] kkobuk_ai DB 메타데이터 저장
 ```
 
 ---
@@ -46,8 +44,8 @@ Lambda           ──────▶ Redis (EC2 #1, 사설 IP:6379)
 
 **Redis 접근 구조**
 - Spring Boot 컨테이너 → Redis: Docker 네트워크(`kkobuk-net`) 내부 통신 (`redis:6379`)
-- FastAPI(EC2 #2), Lambda → Redis: VPC 사설 IP (`EC2_API_PRIVATE_IP:6379`)
-- 보안그룹: 6379 인바운드를 `ec2_ai` SG, `lambda` SG만 허용
+- FastAPI(EC2 #2) → Redis: VPC 사설 IP (`EC2_API_PRIVATE_IP:6379`)
+- 보안그룹: 6379 인바운드를 `ec2_ai` SG만 허용
 
 ### EC2 #2 — AI 서버
 
@@ -72,7 +70,7 @@ Lambda           ──────▶ Redis (EC2 #1, 사설 IP:6379)
 | 데이터베이스 | 사용처 |
 |------|------|
 | `kkobuk` | Spring Boot REST API |
-| `kkobuk_ai` | FastAPI AI 서버 (메타데이터) |
+| `kkobuk_ai` | FastAPI (메타데이터 읽기), Lambda (메타데이터 쓰기) |
 
 - 단일 RDS 인스턴스에 DB 2개로 분리 (비용 절감)
 
@@ -85,15 +83,14 @@ Lambda           ──────▶ Redis (EC2 #1, 사설 IP:6379)
 
 ### Lambda — 학습 파이프라인
 
-- **트리거**: Electron 클라이언트가 Lambda Function URL로 직접 호출
-- **JWT 검증**: `ai/shared/auth.py`로 토큰 유효성 확인 (Spring Boot와 동일 시크릿 공유)
+- **트리거**: Spring Boot REST API가 AWS SDK (`InvokeAsync`)로 호출
+- **인증 불필요**: VPC 내부 서버 간 호출이므로 JWT 검증 없음
 
-1. JWT 검증 (사용자 인증)
-2. 세션 데이터 수신 (~600개)
-3. 전처리 (`ai/shared/preprocessing_*.py`)
-4. Logistic Regression 학습
-5. 모델 S3 저장, 학습 데이터 S3 저장
-6. `kkobuk_ai` DB에 `trained_model_metadata` 레코드 생성
+1. S3에서 학습 데이터 읽기 (~600개)
+2. 전처리 (`ai/shared/preprocessing_*.py`)
+3. Logistic Regression 학습
+4. 모델 S3 저장, 학습 데이터 S3 저장
+5. `kkobuk_ai` DB에 `trained_model_metadata` 레코드 생성
 
 ---
 

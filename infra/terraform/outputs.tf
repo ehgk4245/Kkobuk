@@ -34,6 +34,6 @@ output "ecr_lambda_url" {
 }
 
 output "ec2_api_private_ip" {
-  description = "API EC2 사설 IP (GitHub Actions Secrets: EC2_API_PRIVATE_IP) — FastAPI/Lambda의 Redis 호스트"
+  description = "API EC2 사설 IP (GitHub Actions Secrets: EC2_API_PRIVATE_IP) — FastAPI의 Redis 호스트"
   value       = aws_instance.api.private_ip
 }

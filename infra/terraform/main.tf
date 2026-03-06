@@ -133,7 +133,7 @@ resource "aws_security_group" "ec2_api" {
     from_port       = 6379
     to_port         = 6379
     protocol        = "tcp"
-    security_groups = [aws_security_group.ec2_ai.id, aws_security_group.lambda.id]
+    security_groups = [aws_security_group.ec2_ai.id]
   }
   egress {
     from_port   = 0

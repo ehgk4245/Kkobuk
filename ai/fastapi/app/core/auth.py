@@ -4,6 +4,7 @@ import jwt
 
 _JWT_SECRET = os.environ.get("JWT_SECRET_KEY", "")
 
+
 def _algorithm() -> str:
     key_len = len(_JWT_SECRET.encode())
     if key_len >= 64:
