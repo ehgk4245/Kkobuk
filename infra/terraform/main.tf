@@ -95,12 +95,27 @@ resource "aws_route_table_association" "public_b" {
   route_table_id = aws_route_table.public.id
 }
 
+resource "aws_route_table" "private" {
+  vpc_id = aws_vpc.main.id
+  tags   = { Name = "kkobuk-private-rt" }
+}
+
+resource "aws_route_table_association" "private_a" {
+  subnet_id      = aws_subnet.private_a.id
+  route_table_id = aws_route_table.private.id
+}
+
+resource "aws_route_table_association" "private_b" {
+  subnet_id      = aws_subnet.private_b.id
+  route_table_id = aws_route_table.private.id
+}
+
 # S3 VPC Gateway Endpoint (Lambda → S3, NAT 없이 접근)
 resource "aws_vpc_endpoint" "s3" {
   vpc_id            = aws_vpc.main.id
   service_name      = "com.amazonaws.${var.aws_region}.s3"
   vpc_endpoint_type = "Gateway"
-  route_table_ids   = [aws_route_table.public.id]
+  route_table_ids   = [aws_route_table.public.id, aws_route_table.private.id]
   tags              = { Name = "kkobuk-s3-endpoint" }
 }
 
@@ -317,6 +332,12 @@ resource "aws_instance" "api" {
     domain         = var.domain_api
   })
 
+  metadata_options {
+    http_endpoint               = "enabled"
+    http_put_response_hop_limit = 2
+    http_tokens                 = "required"
+  }
+
   root_block_device {
     volume_size = 20
     volume_type = "gp3"
@@ -339,6 +360,12 @@ resource "aws_instance" "ai" {
   user_data = templatefile("${path.module}/user_data/ai_server.sh", {
     domain = var.domain_ai
   })
+
+  metadata_options {
+    http_endpoint               = "enabled"
+    http_put_response_hop_limit = 2
+    http_tokens                 = "required"
+  }
 
   root_block_device {
     volume_size = 20

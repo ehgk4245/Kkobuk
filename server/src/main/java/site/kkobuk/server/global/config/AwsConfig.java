@@ -24,6 +24,7 @@ public class AwsConfig {
     public LambdaClient lambdaClient() {
         return LambdaClient.builder()
                 .region(Region.of(region))
+                .overrideConfiguration(c -> c.retryStrategy(b -> b.maxAttempts(1)))
                 .build();
     }
 }
