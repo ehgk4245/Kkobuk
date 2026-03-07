@@ -27,5 +27,6 @@ class TrainedModelMetadata(Base):
     member_id = Column(BigInteger, nullable=False)
     s3_url = Column(String(512), nullable=False)
     status = Column(Enum(ModelStatus), nullable=False, default=ModelStatus.INACTIVE)
+    name = Column(String(255), nullable=True)
     description = Column(Text, nullable=True)
     created_at = Column(DateTime, nullable=False, default=func.now())
