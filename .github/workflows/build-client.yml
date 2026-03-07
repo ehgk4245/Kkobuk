@@ -41,7 +41,9 @@ jobs:
         working-directory: client
 
       - name: Build Windows
-        run: npm run build:win
+        run: |
+          npm run build
+          npx electron-builder --win --publish never
         working-directory: client
 
       - name: Upload Windows installer to Release
@@ -79,7 +81,9 @@ jobs:
         working-directory: client
 
       - name: Build Mac
-        run: npm run build:mac
+        run: |
+          npm run build
+          npx electron-builder --mac --publish never
         working-directory: client
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: false
