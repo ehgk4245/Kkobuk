@@ -4,6 +4,15 @@ set -e
 apt update && apt upgrade -y
 apt install -y docker.io nginx certbot python3-certbot-nginx awscli
 
+# Swap 2GB 설정
+fallocate -l 2G /swapfile
+chmod 600 /swapfile
+mkswap /swapfile
+swapon /swapfile
+echo '/swapfile none swap sw 0 0' >> /etc/fstab
+sysctl vm.swappiness=10
+echo 'vm.swappiness=10' >> /etc/sysctl.conf
+
 systemctl enable docker nginx
 systemctl start docker
 usermod -aG docker ubuntu
