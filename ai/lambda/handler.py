@@ -43,6 +43,8 @@ def _get_db():
 def handler(event, context):
     member_id = event["memberId"]
     s3_key = event["s3Key"]
+    model_name = event.get("name", "")
+    model_description = event.get("description", "")
 
     obj = s3.get_object(Bucket=S3_BUCKET, Key=s3_key)
     samples = json.loads(obj["Body"].read())
@@ -84,7 +86,7 @@ def handler(event, context):
     s3.put_object(Bucket=S3_BUCKET, Key=model_key, Body=model_bytes)
 
     model_s3_url = f"s3://{S3_BUCKET}/{model_key}"
-    _save_model_metadata(member_id, model_s3_url)
+    _save_model_metadata(member_id, model_s3_url, model_name, model_description)
 
     return {"statusCode": 200, "memberId": member_id, "modelKey": model_key}
 
@@ -102,7 +104,7 @@ def _save_training_metadata(member_id: int, s3_url: str):
         conn.close()
 
 
-def _save_model_metadata(member_id: int, s3_url: str):
+def _save_model_metadata(member_id: int, s3_url: str, name: str, description: str):
     conn = _get_db()
     try:
         with conn.cursor() as cur:
@@ -111,8 +113,9 @@ def _save_model_metadata(member_id: int, s3_url: str):
                 (member_id,),
             )
             cur.execute(
-                "INSERT INTO trained_model_metadata (member_id, s3_url, status, created_at) VALUES (%s, %s, 'ACTIVE', %s)",
-                (member_id, s3_url, datetime.utcnow()),
+                "INSERT INTO trained_model_metadata (member_id, s3_url, status, name, description, created_at)"
+                " VALUES (%s, %s, 'ACTIVE', %s, %s, %s)",
+                (member_id, s3_url, name or None, description or None, datetime.utcnow()),
             )
         conn.commit()
     finally:

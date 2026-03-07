@@ -64,6 +64,7 @@ CREATE TABLE IF NOT EXISTS trained_model_metadata (
     member_id   BIGINT       NOT NULL,
     s3_url      VARCHAR(512) NOT NULL,
     status      VARCHAR(20)  NOT NULL DEFAULT 'INACTIVE',
+    name        VARCHAR(255) NOT NULL,
     description TEXT,
     created_at  DATETIME     NOT NULL,
     PRIMARY KEY (id)
