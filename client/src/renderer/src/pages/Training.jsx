@@ -4,6 +4,7 @@ import { Camera, CheckCircle, AlertTriangle, ArrowRight, Loader2 } from 'lucide-
 import { useNavigate } from 'react-router-dom'
 import logo from '../../../../resources/icon.png'
 import { useWebcam } from '../context/WebcamContext'
+import { apiFetch } from '../utils/api'
 
 const PREPARE_SECONDS = 5
 const COLLECT_SECONDS = 60
@@ -180,13 +181,8 @@ export default function Training() {
   const handleRequestTraining = async () => {
     setIsTraining(true)
     try {
-      const token = localStorage.getItem('accessToken')
-      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/training/upload`, {
+      const res = await apiFetch('/api/training/upload', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
         body: JSON.stringify({ samples: allSamplesRef.current })
       })
       if (!res.ok) throw new Error(`서버 오류: ${res.status}`)

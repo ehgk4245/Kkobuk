@@ -1,6 +1,7 @@
 import { ArrowLeft, Bell, Database, Repeat, User, Volume2 } from 'lucide-react'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { apiFetch } from '../utils/api'
 
 export default function Settings() {
   const navigate = useNavigate()
@@ -9,12 +10,8 @@ export default function Settings() {
   const [soundEnabled, setSoundEnabled] = useState(true)
 
   const handleLogout = async () => {
-    const accessToken = localStorage.getItem('accessToken')
     try {
-      await fetch(`${import.meta.env.VITE_API_BASE_URL}/auth/logout`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${accessToken}` }
-      })
+      await apiFetch('/auth/logout', { method: 'POST' })
     } catch {
     } finally {
       // eslint-disable-line no-empty
