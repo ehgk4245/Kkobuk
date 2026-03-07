@@ -177,14 +177,26 @@ export default function Training() {
     [mpReady, isCapturing, isTraining, isComplete, startCollection]
   )
 
-  // TODO: 실제 서버 학습 API 연동 (allSamplesRef.current 전송)
-  const handleRequestTraining = () => {
-    console.log('[Kkobuk] 수집 샘플 수:', allSamplesRef.current.length)
+  const handleRequestTraining = async () => {
     setIsTraining(true)
-    setTimeout(() => {
-      setIsTraining(false)
+    try {
+      const token = localStorage.getItem('accessToken')
+      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/training/upload`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ samples: allSamplesRef.current })
+      })
+      if (!res.ok) throw new Error(`서버 오류: ${res.status}`)
       setIsComplete(true)
-    }, 3000)
+    } catch (err) {
+      console.error('[Kkobuk] 학습 요청 실패:', err)
+      alert('학습 요청에 실패했습니다. 다시 시도해 주세요.')
+    } finally {
+      setIsTraining(false)
+    }
   }
 
   const handleComplete = () => {
