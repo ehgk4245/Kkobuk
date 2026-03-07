@@ -60,6 +60,12 @@ variable "s3_bucket_name" {
   type        = string
 }
 
+# Lambda
+variable "lambda_function_name" {
+  description = "Lambda 학습 파이프라인 함수 이름"
+  type        = string
+}
+
 # Domain
 variable "domain_api" {
   description = "REST API 서버 도메인"

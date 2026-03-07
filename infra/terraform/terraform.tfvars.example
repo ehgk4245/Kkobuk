@@ -21,3 +21,6 @@ s3_bucket_name = "kkobuk-storage"
 # Domain
 domain_api = "api.kkobuk.site"
 domain_ai  = "ai.kkobuk.site"
+
+# Lambda
+lambda_function_name = "YOUR_LAMBDA_FUNCTION_NAME"

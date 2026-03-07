@@ -235,6 +235,26 @@ resource "aws_iam_role_policy_attachment" "ec2_ecr" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
 }
 
+resource "aws_iam_role_policy" "ec2_s3_lambda" {
+  name = "kkobuk-ec2-s3-lambda"
+  role = aws_iam_role.ec2.id
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect   = "Allow"
+        Action   = ["s3:PutObject"]
+        Resource = "${aws_s3_bucket.storage.arn}/training-data/*"
+      },
+      {
+        Effect   = "Allow"
+        Action   = ["lambda:InvokeFunction"]
+        Resource = aws_lambda_function.training.arn
+      }
+    ]
+  })
+}
+
 resource "aws_iam_instance_profile" "ec2" {
   name = "kkobuk-ec2-profile"
   role = aws_iam_role.ec2.name
@@ -440,7 +460,7 @@ resource "aws_ecr_lifecycle_policy" "lambda" {
 # Lambda — 학습 파이프라인
 # ============================================================
 resource "aws_lambda_function" "training" {
-  function_name = "kkobuk-training"
+  function_name = var.lambda_function_name
   role          = aws_iam_role.lambda.arn
   package_type  = "Image"
   # GitHub Actions가 실제 이미지를 관리하므로 Terraform은 image_uri 변경 무시

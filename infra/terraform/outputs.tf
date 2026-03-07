@@ -33,6 +33,11 @@ output "ecr_lambda_url" {
   value       = aws_ecr_repository.lambda.repository_url
 }
 
+output "lambda_function_name" {
+  description = "Lambda 함수 이름 (GitHub Actions Secrets: LAMBDA_FUNCTION_NAME)"
+  value       = aws_lambda_function.training.function_name
+}
+
 output "ec2_api_private_ip" {
   description = "API EC2 사설 IP (GitHub Actions Secrets: EC2_API_PRIVATE_IP) — FastAPI의 Redis 호스트"
   value       = aws_instance.api.private_ip
