@@ -1,13 +1,49 @@
-import { ArrowLeft, Bell, Database, Repeat, User, Volume2 } from 'lucide-react'
-import { useState } from 'react'
+import {
+  ArrowLeft,
+  Bell,
+  CheckCircle2,
+  Database,
+  Loader2,
+  Repeat,
+  User,
+  Volume2
+} from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { apiFetch } from '../utils/api'
+import { aiFetch, apiFetch } from '../utils/api'
 
 export default function Settings() {
   const navigate = useNavigate()
 
   const [volume, setVolume] = useState(80)
   const [soundEnabled, setSoundEnabled] = useState(true)
+
+  const [models, setModels] = useState([])
+  const [modelsLoading, setModelsLoading] = useState(true)
+  const [activatingId, setActivatingId] = useState(null)
+
+  useEffect(() => {
+    aiFetch('/api/models')
+      .then((r) => r.json())
+      .then(setModels)
+      .catch(() => {})
+      .finally(() => setModelsLoading(false))
+  }, [])
+
+  const handleActivate = async (modelId) => {
+    setActivatingId(modelId)
+    try {
+      const res = await aiFetch(`/api/models/${modelId}/activate`, { method: 'PUT' })
+      if (res.ok) {
+        setModels((prev) =>
+          prev.map((m) => ({ ...m, status: m.id === modelId ? 'ACTIVE' : 'INACTIVE' }))
+        )
+      }
+    } catch {
+    } finally {
+      setActivatingId(null)
+    }
+  }
 
   const handleLogout = async () => {
     try {
@@ -34,25 +70,69 @@ export default function Settings() {
 
       <main className="flex-1 w-full max-w-lg mx-auto space-y-6">
         <section className="bg-gray-800 rounded-[2rem] p-6 shadow-md border border-gray-700">
-          <div className="flex items-center gap-3 mb-5 text-[#4CAF50]">
-            <Database size={22} className="text-[#8BC34A]" />
-            <h2 className="text-lg font-bold text-white">학습 모델 설정</h2>
-          </div>
-
-          <div className="flex items-center justify-between bg-gray-900/50 p-4 rounded-2xl mb-4">
-            <div>
-              <p className="font-bold text-sm text-gray-200">현재 학습 상태</p>
-              <p className="text-xs text-[#4CAF50] font-medium mt-0.5">최적화 완료됨</p>
+          <div className="flex items-center justify-between mb-5">
+            <div className="flex items-center gap-3">
+              <Database size={22} className="text-[#8BC34A]" />
+              <h2 className="text-lg font-bold text-white">학습 모델 설정</h2>
             </div>
-            <div className="text-3xl">✅</div>
+            <button
+              onClick={() => navigate('/training')}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-700 hover:bg-gray-600 rounded-xl text-xs font-bold text-gray-200 transition"
+            >
+              <Repeat size={14} /> 새로 학습
+            </button>
           </div>
 
-          <button
-            onClick={() => navigate('/training')}
-            className="w-full py-3.5 bg-gray-700 hover:bg-gray-600 rounded-xl font-bold flex items-center justify-center gap-2 text-gray-200 transition"
-          >
-            <Repeat size={18} /> 새롭게 다시 학습하기
-          </button>
+          {modelsLoading ? (
+            <div className="flex justify-center py-6">
+              <Loader2 size={24} className="animate-spin text-gray-500" />
+            </div>
+          ) : models.length === 0 ? (
+            <p className="text-center text-sm text-gray-500 py-4">학습된 모델이 없습니다.</p>
+          ) : (
+            <div className="flex flex-col gap-2">
+              {models.map((model) => (
+                <div
+                  key={model.id}
+                  className={`flex items-center justify-between p-4 rounded-2xl border transition-colors ${
+                    model.status === 'ACTIVE'
+                      ? 'bg-[#8BC34A]/10 border-[#8BC34A]/40'
+                      : 'bg-gray-900/50 border-gray-700'
+                  }`}
+                >
+                  <div className="flex-1 min-w-0 mr-3">
+                    <div className="flex items-center gap-2">
+                      {model.status === 'ACTIVE' && (
+                        <CheckCircle2 size={14} className="text-[#8BC34A] shrink-0" />
+                      )}
+                      <p className="font-bold text-sm text-gray-100 truncate">
+                        {model.name || '이름 없는 모델'}
+                      </p>
+                    </div>
+                    {model.description && (
+                      <p className="text-xs text-gray-500 mt-0.5 truncate">{model.description}</p>
+                    )}
+                    <p className="text-xs text-gray-600 mt-0.5">
+                      {model.createdAt ? new Date(model.createdAt).toLocaleDateString('ko-KR') : ''}
+                    </p>
+                  </div>
+                  {model.status !== 'ACTIVE' && (
+                    <button
+                      onClick={() => handleActivate(model.id)}
+                      disabled={activatingId !== null}
+                      className="shrink-0 px-3 py-1.5 bg-gray-700 hover:bg-gray-600 rounded-xl text-xs font-bold text-gray-200 transition disabled:opacity-50"
+                    >
+                      {activatingId === model.id ? (
+                        <Loader2 size={12} className="animate-spin" />
+                      ) : (
+                        '적용'
+                      )}
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </section>
 
         <section className="bg-gray-800 rounded-[2rem] shadow-md border border-gray-700 overflow-hidden">
