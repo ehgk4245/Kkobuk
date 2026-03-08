@@ -12,7 +12,7 @@ const LABEL = { good: 0, bad: 1 }
 const SAMPLE_INTERVAL_MS = 200
 
 const POSE_IDX = { leftShoulder: 11, rightShoulder: 12 }
-const FACE_IDX = { nose: 4, chin: 152, leftEar: 234, rightEar: 454 }
+const FACE_IDX = { nose: 4, leftEar: 234, rightEar: 454 }
 const pickXYZ = ({ x, y, z }) => ({ x, y, z })
 
 const WASM_URL = './mediapipe-wasm'
@@ -36,6 +36,8 @@ export default function Training() {
   const [capturedBad, setCapturedBad] = useState(false)
   const [isTraining, setIsTraining] = useState(false)
   const [isComplete, setIsComplete] = useState(false)
+  const [modelName, setModelName] = useState('')
+  const [modelDescription, setModelDescription] = useState('')
 
   const [capturePhase, setCapturePhase] = useState(null)
   const [captureMode, setCaptureMode] = useState(null)
@@ -139,7 +141,6 @@ export default function Training() {
             sessionSamples.push({
               label,
               nose: pickXYZ(facePts[FACE_IDX.nose]),
-              chin: pickXYZ(facePts[FACE_IDX.chin]),
               leftEar: pickXYZ(facePts[FACE_IDX.leftEar]),
               rightEar: pickXYZ(facePts[FACE_IDX.rightEar]),
               leftShoulder: pickXYZ(posePts[POSE_IDX.leftShoulder]),
@@ -183,7 +184,11 @@ export default function Training() {
     try {
       const res = await apiFetch('/api/training/upload', {
         method: 'POST',
-        body: JSON.stringify({ samples: allSamplesRef.current })
+        body: JSON.stringify({
+          samples: allSamplesRef.current,
+          name: modelName.trim() || '내 모델',
+          description: modelDescription.trim() || null
+        })
       })
       if (!res.ok) throw new Error(`서버 오류: ${res.status}`)
       setIsComplete(true)
@@ -335,9 +340,9 @@ export default function Training() {
                   {capturedGood && <span className="text-[#8BC34A] text-sm ml-1">✓ 완료</span>}
                 </div>
                 <div className="text-xs text-gray-400 mt-1.5 font-medium">
-                  허리를 펴고 모니터 정면을
+                  허리를 펴고 목을 당겨
                   <br />
-                  바라보세요 &nbsp;
+                  바른 자세를 취해 주세요
                 </div>
               </div>
             </div>
@@ -360,14 +365,35 @@ export default function Training() {
                   {capturedBad && <span className="text-[#FFC107] text-sm ml-1">✓ 완료</span>}
                 </div>
                 <div className="text-xs text-gray-400 mt-1.5 font-medium">
-                  평소 모니터에 집중한
+                  자연스럽게 나오는 거북목
                   <br />
-                  굽은 자세 &nbsp;
+                  자세를 취해 주세요
                 </div>
               </div>
             </div>
           </button>
         </div>
+
+        {bothCaptured && !isComplete && (
+          <div className="mt-6 w-full max-w-2xl px-4 flex flex-col gap-3">
+            <input
+              type="text"
+              placeholder="모델 이름 (예: 사무실 자세 모델)"
+              value={modelName}
+              onChange={(e) => setModelName(e.target.value)}
+              disabled={isTraining}
+              className="w-full bg-gray-800 border border-gray-700 rounded-2xl px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-[#8BC34A] transition disabled:opacity-50"
+            />
+            <input
+              type="text"
+              placeholder="설명 (선택사항)"
+              value={modelDescription}
+              onChange={(e) => setModelDescription(e.target.value)}
+              disabled={isTraining}
+              className="w-full bg-gray-800 border border-gray-700 rounded-2xl px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-[#8BC34A] transition disabled:opacity-50"
+            />
+          </div>
+        )}
 
         <div className="mt-8 flex items-center gap-3">
           {!isComplete ? (
@@ -400,13 +426,17 @@ export default function Training() {
             </button>
           )}
 
-          {import.meta.env.DEV && (
+          {!isComplete && (
             <button
               onClick={() => navigate('/main')}
-              className="text-xs text-gray-600 hover:text-gray-400 underline transition-colors"
-              title="[DEV] 학습 건너뛰기"
+              disabled={isCapturing || isTraining}
+              className={`flex items-center gap-2 px-6 py-3 rounded-full font-bold shadow-lg transition-all ${
+                isCapturing || isTraining
+                  ? 'bg-gray-700 text-gray-500 cursor-not-allowed'
+                  : 'bg-gray-600 hover:bg-gray-500 text-white'
+              }`}
             >
-              [DEV] 건너뛰기
+              나중에 학습하기
             </button>
           )}
         </div>
