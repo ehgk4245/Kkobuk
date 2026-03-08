@@ -1,4 +1,15 @@
 const BASE_URL = import.meta.env.VITE_API_BASE_URL
+const AI_BASE_URL = import.meta.env.VITE_AI_BASE_URL
+
+export async function aiFetch(url, options = {}) {
+  const token = localStorage.getItem('accessToken')
+  const headers = {
+    'Content-Type': 'application/json',
+    ...options.headers,
+    Authorization: `Bearer ${token}`
+  }
+  return fetch(`${AI_BASE_URL}${url}`, { ...options, headers })
+}
 
 async function refreshTokens() {
   const refreshToken = localStorage.getItem('refreshToken')
@@ -18,7 +29,11 @@ async function refreshTokens() {
 
 export async function apiFetch(url, options = {}) {
   const token = localStorage.getItem('accessToken')
-  const headers = { 'Content-Type': 'application/json', ...options.headers, Authorization: `Bearer ${token}` }
+  const headers = {
+    'Content-Type': 'application/json',
+    ...options.headers,
+    Authorization: `Bearer ${token}`
+  }
 
   let res = await fetch(`${BASE_URL}${url}`, { ...options, headers })
 

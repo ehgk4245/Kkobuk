@@ -4,21 +4,52 @@ import { RiKakaoTalkFill } from 'react-icons/ri'
 import { useNavigate } from 'react-router-dom'
 import logo from '../../../../resources/icon.png'
 
+const AI_BASE_URL = import.meta.env.VITE_AI_BASE_URL
+
+async function checkHasAnyModel(token) {
+  try {
+    const res = await fetch(`${AI_BASE_URL}/api/models`, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+    if (!res.ok) return false
+    const models = await res.json()
+    return models.length > 0
+  } catch {
+    return false
+  }
+}
+
 export default function Login() {
   const navigate = useNavigate()
 
   useEffect(() => {
     const accessToken = localStorage.getItem('accessToken')
     if (accessToken) {
-      const onboardingComplete = localStorage.getItem('onboardingComplete')
-      navigate(onboardingComplete ? '/main' : '/onboarding')
+      if (localStorage.getItem('onboardingComplete')) {
+        navigate('/main')
+        return
+      }
+      checkHasAnyModel(accessToken).then((hasModel) => {
+        if (hasModel) {
+          localStorage.setItem('onboardingComplete', 'true')
+          navigate('/main')
+        } else {
+          navigate('/onboarding')
+        }
+      })
       return
     }
 
-    window.api.auth.onCallback(({ accessToken, refreshToken }) => {
+    window.api.auth.onCallback(async ({ accessToken, refreshToken }) => {
       localStorage.setItem('accessToken', accessToken)
       localStorage.setItem('refreshToken', refreshToken)
-      navigate('/onboarding')
+      const hasModel = await checkHasAnyModel(accessToken)
+      if (hasModel) {
+        localStorage.setItem('onboardingComplete', 'true')
+        navigate('/main')
+      } else {
+        navigate('/onboarding')
+      }
     })
 
     return () => {
