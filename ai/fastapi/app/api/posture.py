@@ -1,9 +1,14 @@
+import asyncio
+import logging
+
 import numpy as np
 from fastapi import APIRouter, Query, WebSocket, WebSocketDisconnect
 
 from app.core.auth import verify_token
 from app.core.database import SessionLocal
 from app.services.inference import build_baseline, load_model, predict
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -19,10 +24,19 @@ async def posture_ws(ws: WebSocket, token: str = Query(...)):
 
     await ws.accept()
 
-    # 2. 모델 로드
+    # 2. 모델 로드 (blocking I/O → thread executor로 이벤트 루프 블로킹 방지)
     db = SessionLocal()
     try:
-        model = load_model(member_id, db)
+        loop = asyncio.get_event_loop()
+        model = await loop.run_in_executor(None, load_model, member_id, db)
+    except Exception as e:
+        logger.exception("[posture_ws] member_id=%d: 모델 로드 실패", member_id)
+        await ws.send_json({
+            "type": "error",
+            "message": f"모델 로드에 실패했습니다: {e}"
+        })
+        await ws.close()
+        return
     finally:
         db.close()
 

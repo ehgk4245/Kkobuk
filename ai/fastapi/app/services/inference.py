@@ -1,4 +1,5 @@
 import io
+import logging
 import os
 import sys
 import threading
@@ -9,6 +10,8 @@ import boto3
 import joblib
 import numpy as np
 from sqlalchemy.orm import Session
+
+logger = logging.getLogger(__name__)
 
 # ai/shared 경로 추가
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..', 'shared'))
@@ -34,6 +37,7 @@ def load_model(member_id: int, db: Session) -> Any | None:
     with _cache_lock:
         if member_id in _model_cache:
             _model_cache.move_to_end(member_id)
+            logger.info("[load_model] member_id=%d: cache hit", member_id)
             return _model_cache[member_id]
 
     row = (
@@ -42,17 +46,20 @@ def load_model(member_id: int, db: Session) -> Any | None:
         .first()
     )
     if row is None:
+        logger.warning("[load_model] member_id=%d: ACTIVE 모델 없음", member_id)
         return None
 
     bucket, key = _parse_s3_url(row.s3_url)
+    logger.info("[load_model] member_id=%d: S3 다운로드 시작 s3://%s/%s", member_id, bucket, key)
     buf = io.BytesIO()
     _s3.download_fileobj(bucket, key, buf)
     buf.seek(0)
     model = joblib.load(buf)
+    logger.info("[load_model] member_id=%d: 모델 로드 완료", member_id)
 
     with _cache_lock:
         if len(_model_cache) >= _MAX_CACHE:
-            _model_cache.popitem(last=False)  # 가장 오래된 항목 제거
+            _model_cache.popitem(last=False)
         _model_cache[member_id] = model
 
     return model
