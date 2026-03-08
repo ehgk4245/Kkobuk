@@ -70,11 +70,13 @@ def invalidate_model_cache(member_id: int) -> None:
         _model_cache.pop(member_id, None)
 
 
-def predict(model: Any, landmarks: dict, baseline: np.ndarray) -> tuple[str, float]:
+def predict(model_bundle: Any, landmarks: dict, baseline: np.ndarray) -> tuple[str, float]:
+    clf = model_bundle["model"]
+    scaler = model_bundle["scaler"]
     features = extract_features(landmarks, baseline)
-    x = np.array([features])
-    label_idx = int(model.predict(x)[0])
-    proba = model.predict_proba(x)[0]
+    x = scaler.transform(np.array([features]))
+    label_idx = int(clf.predict(x)[0])
+    proba = clf.predict_proba(x)[0]
     label = "good" if label_idx == 0 else "bad"
     confidence = float(proba[label_idx])
     return label, confidence
