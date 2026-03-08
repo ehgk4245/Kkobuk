@@ -26,7 +26,10 @@ jobs:
           key: mediapipe-${{ hashFiles('client/scripts/setup-mediapipe.mjs') }}
 
       - name: Write .env
-        run: echo "VITE_API_BASE_URL=${{ secrets.VITE_API_BASE_URL }}" > client/.env
+        run: |
+          echo "VITE_API_BASE_URL=${{ secrets.VITE_API_BASE_URL }}" > client/.env
+          echo "VITE_AI_BASE_URL=${{ secrets.VITE_AI_BASE_URL }}" >> client/.env
+          echo "VITE_AI_WS_URL=${{ secrets.VITE_AI_WS_URL }}" >> client/.env
         shell: bash
 
       - name: Install dependencies
@@ -68,7 +71,10 @@ jobs:
           key: mediapipe-${{ hashFiles('client/scripts/setup-mediapipe.mjs') }}
 
       - name: Write .env
-        run: echo "VITE_API_BASE_URL=${{ secrets.VITE_API_BASE_URL }}" > client/.env
+        run: |
+          echo "VITE_API_BASE_URL=${{ secrets.VITE_API_BASE_URL }}" > client/.env
+          echo "VITE_AI_BASE_URL=${{ secrets.VITE_AI_BASE_URL }}" >> client/.env
+          echo "VITE_AI_WS_URL=${{ secrets.VITE_AI_WS_URL }}" >> client/.env
 
       - name: Install dependencies
         run: npm install
