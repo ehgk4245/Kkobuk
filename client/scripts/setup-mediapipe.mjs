@@ -62,7 +62,8 @@ const downloadModel = ({ url, file }) =>
         let received = 0
         res.on('data', (chunk) => {
           received += chunk.length
-          if (total) process.stdout.write(`\r  ${file}: ${Math.round((received / total) * 100)}%   `)
+          if (total)
+            process.stdout.write(`\r  ${file}: ${Math.round((received / total) * 100)}%   `)
         })
         res.pipe(stream)
         stream.on('finish', () => {
