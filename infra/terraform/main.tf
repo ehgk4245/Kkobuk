@@ -263,6 +263,11 @@ resource "aws_iam_role_policy" "ec2_s3_lambda" {
       },
       {
         Effect   = "Allow"
+        Action   = ["s3:GetObject"]
+        Resource = "${aws_s3_bucket.storage.arn}/models/*"
+      },
+      {
+        Effect   = "Allow"
         Action   = ["lambda:InvokeFunction"]
         Resource = aws_lambda_function.training.arn
       }
