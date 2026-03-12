@@ -48,8 +48,8 @@ spring:
         jwt:
           secret-key: ${JWT_SECRET_KEY}
 aws:
-  region: ${AWS_REGION:ap-northeast-2}
+  region: ap-northeast-2
   s3:
-    bucket: ${S3_BUCKET_NAME:kkobuk-local}
+    bucket: kkobuk-storage
   lambda:
-    function-name: ${LAMBDA_FUNCTION_NAME:kkobuk-training}
+    function-name: kkobuk-training

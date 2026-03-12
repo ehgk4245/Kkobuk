@@ -19,7 +19,7 @@ spring:
 
   data:
     redis:
-      host: ${SPRING_REDIS_HOST:127.0.0.1}
+      host: ${SPRING_REDIS_HOST}
       port: 6379
       password: ${SPRING_REDIS_PASSWORD}
 
@@ -49,8 +49,8 @@ spring:
         jwt:
           secret-key: ${JWT_SECRET_KEY}
 aws:
-  region: ${AWS_REGION:ap-northeast-2}
+  region: ${AWS_REGION}
   s3:
-    bucket: ${S3_BUCKET_NAME:kkobuk-local}
+    bucket: ${S3_BUCKET_NAME}
   lambda:
-    function-name: ${LAMBDA_FUNCTION_NAME:kkobuk-training}
+    function-name: ${LAMBDA_FUNCTION_NAME}
