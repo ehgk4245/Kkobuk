@@ -451,7 +451,7 @@ resource "aws_s3_bucket" "storage" {
 
 resource "aws_s3_bucket_versioning" "storage" {
   bucket = aws_s3_bucket.storage.id
-  versioning_configuration { status = "Enabled" }
+  versioning_configuration { status = "Suspended" }
 }
 
 # ============================================================
