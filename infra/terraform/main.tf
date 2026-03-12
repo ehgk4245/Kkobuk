@@ -231,10 +231,10 @@ resource "aws_security_group" "rds" {
 }
 
 # ============================================================
-# IAM — EC2 (ECR pull 권한)
+# IAM — EC2 API 서버 (Spring Boot): S3 학습데이터 업로드 + Lambda 호출
 # ============================================================
-resource "aws_iam_role" "ec2" {
-  name = "kkobuk-ec2-role"
+resource "aws_iam_role" "ec2_api" {
+  name = "kkobuk-ec2-api-role"
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{
@@ -245,14 +245,14 @@ resource "aws_iam_role" "ec2" {
   })
 }
 
-resource "aws_iam_role_policy_attachment" "ec2_ecr" {
-  role       = aws_iam_role.ec2.name
+resource "aws_iam_role_policy_attachment" "ec2_api_ecr" {
+  role       = aws_iam_role.ec2_api.name
   policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
 }
 
-resource "aws_iam_role_policy" "ec2_s3_lambda" {
-  name = "kkobuk-ec2-s3-lambda"
-  role = aws_iam_role.ec2.id
+resource "aws_iam_role_policy" "ec2_api_s3_lambda" {
+  name = "kkobuk-ec2-api-s3-lambda"
+  role = aws_iam_role.ec2_api.id
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -263,11 +263,6 @@ resource "aws_iam_role_policy" "ec2_s3_lambda" {
       },
       {
         Effect   = "Allow"
-        Action   = ["s3:GetObject", "s3:DeleteObject"]
-        Resource = "${aws_s3_bucket.storage.arn}/models/*"
-      },
-      {
-        Effect   = "Allow"
         Action   = ["lambda:InvokeFunction"]
         Resource = aws_lambda_function.training.arn
       }
@@ -275,9 +270,49 @@ resource "aws_iam_role_policy" "ec2_s3_lambda" {
   })
 }
 
-resource "aws_iam_instance_profile" "ec2" {
-  name = "kkobuk-ec2-profile"
-  role = aws_iam_role.ec2.name
+resource "aws_iam_instance_profile" "ec2_api" {
+  name = "kkobuk-ec2-api-profile"
+  role = aws_iam_role.ec2_api.name
+}
+
+# ============================================================
+# IAM — EC2 AI 서버 (FastAPI): S3 모델 파일 조회/삭제
+# ============================================================
+resource "aws_iam_role" "ec2_ai" {
+  name = "kkobuk-ec2-ai-role"
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Action    = "sts:AssumeRole"
+      Effect    = "Allow"
+      Principal = { Service = "ec2.amazonaws.com" }
+    }]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "ec2_ai_ecr" {
+  role       = aws_iam_role.ec2_ai.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
+}
+
+resource "aws_iam_role_policy" "ec2_ai_s3" {
+  name = "kkobuk-ec2-ai-s3"
+  role = aws_iam_role.ec2_ai.id
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect   = "Allow"
+        Action   = ["s3:GetObject", "s3:DeleteObject"]
+        Resource = "${aws_s3_bucket.storage.arn}/models/*"
+      }
+    ]
+  })
+}
+
+resource "aws_iam_instance_profile" "ec2_ai" {
+  name = "kkobuk-ec2-ai-profile"
+  role = aws_iam_role.ec2_ai.name
 }
 
 # ============================================================
@@ -330,7 +365,7 @@ resource "aws_instance" "api" {
   subnet_id              = aws_subnet.public_a.id
   vpc_security_group_ids = [aws_security_group.ec2_api.id]
   key_name               = var.ec2_key_pair
-  iam_instance_profile   = aws_iam_instance_profile.ec2.name
+  iam_instance_profile   = aws_iam_instance_profile.ec2_api.name
 
   user_data = templatefile("${path.module}/user_data/api_server.sh", {
     redis_password = var.redis_password
@@ -360,7 +395,7 @@ resource "aws_instance" "ai" {
   subnet_id              = aws_subnet.public_a.id
   vpc_security_group_ids = [aws_security_group.ec2_ai.id]
   key_name               = var.ec2_key_pair
-  iam_instance_profile   = aws_iam_instance_profile.ec2.name
+  iam_instance_profile   = aws_iam_instance_profile.ec2_ai.name
 
   user_data = templatefile("${path.module}/user_data/ai_server.sh", {
     domain = var.domain_ai
