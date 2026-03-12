@@ -25,7 +25,7 @@ public class TrainingController {
             @Valid @RequestBody TrainingUploadRequest request
     ) {
         Long memberId = Long.valueOf(jwt.getSubject());
-        trainingService.uploadAndTrain(memberId, request);
+        trainingService.uploadAndTrain(memberId, request, jwt.getTokenValue());
         return ResponseEntity.ok().build();
     }
 }

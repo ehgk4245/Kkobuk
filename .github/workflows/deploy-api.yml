@@ -72,6 +72,7 @@ jobs:
           AWS_REGION=${{ secrets.AWS_REGION }}
           S3_BUCKET_NAME=${{ secrets.S3_BUCKET_NAME }}
           LAMBDA_FUNCTION_NAME=${{ secrets.LAMBDA_FUNCTION_NAME }}
+          AI_BASE_URL=${{ secrets.AI_BASE_URL }}
           ENVEOF"
 
       - name: Deploy (blue-green)

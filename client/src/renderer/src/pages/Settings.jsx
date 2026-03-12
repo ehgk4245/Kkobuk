@@ -4,7 +4,8 @@ import {
   CheckCircle2,
   Database,
   Loader2,
-  Repeat,
+  Plus,
+  Trash2,
   User,
   Volume2
 } from 'lucide-react'
@@ -18,9 +19,12 @@ export default function Settings() {
   const [volume, setVolume] = useState(80)
   const [soundEnabled, setSoundEnabled] = useState(true)
 
+  const MODEL_LIMIT = 5
+
   const [models, setModels] = useState([])
   const [modelsLoading, setModelsLoading] = useState(true)
   const [activatingId, setActivatingId] = useState(null)
+  const [deletingId, setDeletingId] = useState(null)
 
   useEffect(() => {
     aiFetch('/api/models')
@@ -42,6 +46,19 @@ export default function Settings() {
     } catch {
     } finally {
       setActivatingId(null)
+    }
+  }
+
+  const handleDelete = async (modelId) => {
+    setDeletingId(modelId)
+    try {
+      const res = await aiFetch(`/api/models/${modelId}`, { method: 'DELETE' })
+      if (res.ok) {
+        setModels((prev) => prev.filter((m) => m.id !== modelId))
+      }
+    } catch {
+    } finally {
+      setDeletingId(null)
     }
   }
 
@@ -74,12 +91,19 @@ export default function Settings() {
             <div className="flex items-center gap-3">
               <Database size={22} className="text-[#8BC34A]" />
               <h2 className="text-lg font-bold text-white">학습 모델 설정</h2>
+              {!modelsLoading && (
+                <span className="text-xs text-gray-500 font-medium">
+                  {models.length}/{MODEL_LIMIT}
+                </span>
+              )}
             </div>
             <button
               onClick={() => navigate('/training')}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-700 hover:bg-gray-600 rounded-xl text-xs font-bold text-gray-200 transition"
+              disabled={models.length >= MODEL_LIMIT}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-700 hover:bg-gray-600 rounded-xl text-xs font-bold text-gray-200 transition disabled:opacity-40 disabled:cursor-not-allowed"
+              title={models.length >= MODEL_LIMIT ? `모델은 최대 ${MODEL_LIMIT}개까지 학습할 수 있습니다` : undefined}
             >
-              <Repeat size={14} /> 새로 학습
+              <Plus size={14} /> 모델 학습
             </button>
           </div>
 
@@ -116,19 +140,32 @@ export default function Settings() {
                       {model.createdAt ? new Date(model.createdAt).toLocaleDateString('ko-KR') : ''}
                     </p>
                   </div>
-                  {model.status !== 'ACTIVE' && (
+                  <div className="flex items-center gap-2 shrink-0">
+                    {model.status !== 'ACTIVE' && (
+                      <button
+                        onClick={() => handleActivate(model.id)}
+                        disabled={activatingId !== null || deletingId !== null}
+                        className="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 rounded-xl text-xs font-bold text-gray-200 transition disabled:opacity-50"
+                      >
+                        {activatingId === model.id ? (
+                          <Loader2 size={12} className="animate-spin" />
+                        ) : (
+                          '적용'
+                        )}
+                      </button>
+                    )}
                     <button
-                      onClick={() => handleActivate(model.id)}
-                      disabled={activatingId !== null}
-                      className="shrink-0 px-3 py-1.5 bg-gray-700 hover:bg-gray-600 rounded-xl text-xs font-bold text-gray-200 transition disabled:opacity-50"
+                      onClick={() => handleDelete(model.id)}
+                      disabled={deletingId !== null || activatingId !== null}
+                      className="p-1.5 text-gray-600 hover:text-red-400 hover:bg-red-400/10 rounded-xl transition disabled:opacity-50"
                     >
-                      {activatingId === model.id ? (
-                        <Loader2 size={12} className="animate-spin" />
+                      {deletingId === model.id ? (
+                        <Loader2 size={14} className="animate-spin" />
                       ) : (
-                        '적용'
+                        <Trash2 size={14} />
                       )}
                     </button>
-                  )}
+                  </div>
                 </div>
               ))}
             </div>

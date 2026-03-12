@@ -94,7 +94,7 @@ ai/
     requirements.txt
     app/
       api/
-        model.py     # GET /api/models, PUT /api/models/{id}/activate
+        model.py     # GET /api/models, PUT /api/models/{id}/activate, DELETE /api/models/{id}
         posture.py   # WebSocket /ws/posture (실시간 자세 추론)
       core/
         auth.py      # JWT 검증 (FastAPI 전용, Spring Boot 시크릿 공유)
@@ -173,6 +173,9 @@ SPRING_REDIS_PASSWORD=
 AWS_REGION=
 S3_BUCKET_NAME=
 LAMBDA_FUNCTION_NAME=
+
+# AI 서버 (prod only)
+AI_BASE_URL=
 ```
 
 `client/.env` (→ `client/.env.example` 참고):

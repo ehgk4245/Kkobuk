@@ -263,7 +263,7 @@ resource "aws_iam_role_policy" "ec2_s3_lambda" {
       },
       {
         Effect   = "Allow"
-        Action   = ["s3:GetObject"]
+        Action   = ["s3:GetObject", "s3:DeleteObject"]
         Resource = "${aws_s3_bucket.storage.arn}/models/*"
       },
       {
