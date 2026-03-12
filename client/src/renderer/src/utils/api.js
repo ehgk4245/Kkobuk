@@ -27,6 +27,30 @@ export async function aiFetch(url, options = {}) {
   return res
 }
 
+function getTokenExpiry(token) {
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')))
+    return payload.exp * 1000
+  } catch {
+    return 0
+  }
+}
+
+export async function getValidToken() {
+  const token = localStorage.getItem('accessToken')
+  if (!token || getTokenExpiry(token) - Date.now() < 30 * 1000) {
+    const ok = await refreshTokens()
+    if (!ok) {
+      localStorage.removeItem('accessToken')
+      localStorage.removeItem('refreshToken')
+      window.location.hash = '/'
+      throw new Error('세션이 만료되었습니다. 다시 로그인해 주세요.')
+    }
+    return localStorage.getItem('accessToken')
+  }
+  return token
+}
+
 async function refreshTokens() {
   const refreshToken = localStorage.getItem('refreshToken')
   if (!refreshToken) return false

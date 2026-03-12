@@ -15,7 +15,7 @@ import {
 import { PoseLandmarker, FaceLandmarker, FilesetResolver } from '@mediapipe/tasks-vision'
 import { useNavigate } from 'react-router-dom'
 import { useWebcam } from '../context/WebcamContext'
-import { aiFetch } from '../utils/api'
+import { aiFetch, getValidToken } from '../utils/api'
 
 const POSE_IDX = { leftShoulder: 11, rightShoulder: 12 }
 const FACE_IDX = { nose: 4, leftEar: 234, rightEar: 454 }
@@ -300,12 +300,20 @@ export default function Main() {
     }, 1000)
   }, [])
 
-  const handleStartTracking = useCallback(() => {
+  const handleStartTracking = useCallback(async () => {
     if (!mpReady) return
     setWsError(null)
     setTrackingState('connecting')
 
-    const token = localStorage.getItem('accessToken')
+    let token
+    try {
+      token = await getValidToken()
+    } catch (e) {
+      setWsError(e.message)
+      setTrackingState('idle')
+      return
+    }
+
     const ws = new WebSocket(`${AI_WS_URL}/ws/posture?token=${encodeURIComponent(token)}`)
     wsRef.current = ws
 
