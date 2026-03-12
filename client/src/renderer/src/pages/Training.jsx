@@ -190,11 +190,14 @@ export default function Training() {
           description: modelDescription.trim() || null
         })
       })
-      if (!res.ok) throw new Error(`서버 오류: ${res.status}`)
+      if (!res.ok) {
+        const data = await res.json().catch(() => null)
+        throw new Error(data?.message ?? `서버 오류: ${res.status}`)
+      }
       setIsComplete(true)
     } catch (err) {
       console.error('[Kkobuk] 학습 요청 실패:', err)
-      alert('학습 요청에 실패했습니다. 다시 시도해 주세요.')
+      alert(err.message || '학습 요청에 실패했습니다. 다시 시도해 주세요.')
     } finally {
       setIsTraining(false)
     }
