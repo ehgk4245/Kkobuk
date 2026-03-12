@@ -54,6 +54,7 @@ public class TrainingService {
         checkModelLimit(accessToken);
         String s3Key = uploadToS3(memberId, request);
         invokeLambda(memberId, s3Key, request);
+        invalidateFastApiCache(accessToken);
     }
 
     private void checkModelLimit(String accessToken) {
@@ -103,15 +104,34 @@ public class TrainingService {
                            "description", request.description() != null ? request.description() : "")
             );
 
-            lambdaClient.invoke(
+            var response = lambdaClient.invoke(
                     InvokeRequest.builder()
                             .functionName(lambdaFunctionName)
                             .invocationType(InvocationType.REQUEST_RESPONSE)
                             .payload(software.amazon.awssdk.core.SdkBytes.fromUtf8String(payload))
                             .build()
             );
+
+            if (response.functionError() != null) {
+                log.error("[invokeLambda] Lambda 함수 오류: {}", response.payload().asUtf8String());
+                throw new RuntimeException("학습 처리 중 오류가 발생했습니다.");
+            }
+        } catch (RuntimeException e) {
+            throw e;
         } catch (Exception e) {
             throw new RuntimeException("Lambda 호출 실패", e);
+        }
+    }
+
+    private void invalidateFastApiCache(String accessToken) {
+        try {
+            restClient.post()
+                    .uri(aiBaseUrl + "/api/models/cache/invalidate")
+                    .header("Authorization", "Bearer " + accessToken)
+                    .retrieve()
+                    .toBodilessEntity();
+        } catch (Exception e) {
+            log.warn("[invalidateFastApiCache] AI 서버 캐시 무효화 실패 (무시): {}", e.getMessage());
         }
     }
 }

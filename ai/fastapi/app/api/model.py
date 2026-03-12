@@ -63,6 +63,12 @@ def activate_model(
     return {"ok": True}
 
 
+@router.post("/cache/invalidate")
+def invalidate_cache(member_id: int = Depends(get_current_member_id)):
+    invalidate_model_cache(member_id)
+    return {"ok": True}
+
+
 @router.delete("/{model_id}")
 def delete_model(
     model_id: int,
