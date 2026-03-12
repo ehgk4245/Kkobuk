@@ -29,9 +29,25 @@ const PRE_COUNTDOWN_SECONDS = 3
 const BASELINE_SECONDS = 5
 const BASELINE_INTERVAL_MS = 200
 const FRAME_INTERVAL_MS = 500
-const BAD_POSTURE_THRESHOLD = 0.7
-
 const AI_WS_URL = import.meta.env.VITE_AI_WS_URL
+
+function playNotificationSound(volume) {
+  try {
+    const ctx = new AudioContext()
+    const osc = ctx.createOscillator()
+    const gain = ctx.createGain()
+    osc.connect(gain)
+    gain.connect(ctx.destination)
+    osc.type = 'sine'
+    osc.frequency.setValueAtTime(660, ctx.currentTime)
+    osc.frequency.setValueAtTime(880, ctx.currentTime + 0.15)
+    gain.gain.setValueAtTime(volume * 0.8, ctx.currentTime)
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5)
+    osc.start(ctx.currentTime)
+    osc.stop(ctx.currentTime + 0.5)
+    osc.onended = () => ctx.close()
+  } catch {} // eslint-disable-line no-empty
+}
 
 // trackingState:
 // 'idle' | 'connecting' | 'baseline_prompt'
@@ -144,6 +160,7 @@ export default function Main() {
   const animFrameRef = useRef(null)
   const landmarkHandlerRef = useRef(null)
   const isRecalibrationRef = useRef(false)
+  const soundIntervalTimerRef = useRef(null)
 
   // 활성 모델 존재 여부 확인
   useEffect(() => {
@@ -231,6 +248,29 @@ export default function Main() {
       if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current)
     }
   }, [mpReady])
+
+  // 거북목 지속 시 주기적 알림음
+  useEffect(() => {
+    if (soundIntervalTimerRef.current) {
+      clearInterval(soundIntervalTimerRef.current)
+      soundIntervalTimerRef.current = null
+    }
+    if (!isGoodPosture && trackingState === 'tracking') {
+      if (localStorage.getItem('kkobuk_soundEnabled') === 'false') return
+      const volume = Number(localStorage.getItem('kkobuk_soundVolume') ?? 80) / 100
+      const intervalSec = Number(localStorage.getItem('kkobuk_soundInterval') ?? 10)
+      playNotificationSound(volume)
+      soundIntervalTimerRef.current = setInterval(() => {
+        playNotificationSound(volume)
+      }, intervalSec * 1000)
+    }
+    return () => {
+      if (soundIntervalTimerRef.current) {
+        clearInterval(soundIntervalTimerRef.current)
+        soundIntervalTimerRef.current = null
+      }
+    }
+  }, [isGoodPosture, trackingState])
 
   // 언마운트 시 WebSocket 정리
   useEffect(() => {
@@ -331,7 +371,8 @@ export default function Main() {
         case 'result': {
           const badProba = msg.label === 'bad' ? msg.confidence : 1 - msg.confidence
           setPostureProba(badProba)
-          setIsGoodPosture(badProba < BAD_POSTURE_THRESHOLD)
+          const threshold = Number(localStorage.getItem('kkobuk_badPostureThreshold') ?? 70) / 100
+          setIsGoodPosture(badProba < threshold)
           break
         }
         case 'error':
