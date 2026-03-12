@@ -7,8 +7,8 @@
 
 | 플랫폼 | 다운로드 |
 |--------|---------|
-| Windows | [kkobuk-0.1.6-setup.exe](https://github.com/ehgk4245/Kkobuk/releases/download/v0.1.6-beta/kkobuk-0.1.6-setup.exe) |
-| macOS | [kkobuk-0.1.6.dmg](https://github.com/ehgk4245/Kkobuk/releases/download/v0.1.6-beta/kkobuk-0.1.6.dmg) |
+| Windows | [kkobuk-0.1.7-setup.exe](https://github.com/ehgk4245/Kkobuk/releases/download/v0.1.7-beta/kkobuk-0.1.7-setup.exe) |
+| macOS | [kkobuk-0.1.7.dmg](https://github.com/ehgk4245/Kkobuk/releases/download/v0.1.7-beta/kkobuk-0.1.7.dmg) |
 
 > 전체 릴리즈 목록: [Releases](https://github.com/ehgk4245/Kkobuk/releases)
 
