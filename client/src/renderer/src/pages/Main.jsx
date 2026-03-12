@@ -29,6 +29,7 @@ const PRE_COUNTDOWN_SECONDS = 3
 const BASELINE_SECONDS = 5
 const BASELINE_INTERVAL_MS = 200
 const FRAME_INTERVAL_MS = 500
+const BAD_POSTURE_THRESHOLD = 0.7
 
 const AI_WS_URL = import.meta.env.VITE_AI_WS_URL
 
@@ -131,6 +132,7 @@ export default function Main() {
 
   const [trackingState, setTrackingState] = useState('idle')
   const [isGoodPosture, setIsGoodPosture] = useState(true)
+  const [postureProba, setPostureProba] = useState(null)
   const [countdown, setCountdown] = useState(0)
   const [wsError, setWsError] = useState(null)
   const [mpReady, setMpReady] = useState(false)
@@ -326,9 +328,12 @@ export default function Main() {
         case 'ready':
           startFrameStreaming()
           break
-        case 'result':
-          setIsGoodPosture(msg.label === 'good')
+        case 'result': {
+          const badProba = msg.label === 'bad' ? msg.confidence : 1 - msg.confidence
+          setPostureProba(badProba)
+          setIsGoodPosture(badProba < BAD_POSTURE_THRESHOLD)
           break
+        }
         case 'error':
           setWsError(msg.message)
           closeWs()
@@ -356,6 +361,7 @@ export default function Main() {
     closeWs()
     landmarkHandlerRef.current = null
     setTrackingState('idle')
+    setPostureProba(null)
   }, [closeWs])
 
   const handlePause = useCallback(() => {
@@ -437,12 +443,19 @@ export default function Main() {
             </div>
           )}
           {isTracking && isLiveTracking && (
-            <div
-              className={`absolute bottom-4 left-1/2 -translate-x-1/2 w-[85%] py-2 text-center rounded-full font-extrabold shadow-lg text-sm transition-colors ${
-                isGoodPosture ? 'bg-[#8BC34A]/90 text-white' : 'bg-[#FFC107]/90 text-gray-900'
-              }`}
-            >
-              {isGoodPosture ? '바른 자세 유지!' : '거북목 주의!'}
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 w-[85%] flex flex-col items-center gap-1">
+              <div
+                className={`w-full py-2 text-center rounded-full font-extrabold shadow-lg text-sm transition-colors ${
+                  isGoodPosture ? 'bg-[#8BC34A]/90 text-white' : 'bg-[#FFC107]/90 text-gray-900'
+                }`}
+              >
+                {isGoodPosture ? '바른 자세 유지!' : '거북목 주의!'}
+              </div>
+              {postureProba !== null && (
+                <div className="text-[10px] font-bold text-gray-300 bg-black/50 px-2.5 py-0.5 rounded-full">
+                  {Math.round(postureProba * 100)}%
+                </div>
+              )}
             </div>
           )}
           {isPaused && (
@@ -604,22 +617,25 @@ export default function Main() {
 
           {isLiveTracking && (
             <div className="absolute bottom-8 left-0 w-full flex flex-col items-center z-10">
-              <>
-                <div className="mb-3 drop-shadow-xl transform transition-transform duration-300 hover:scale-110">
-                  {isGoodPosture ? (
-                    <span className="text-6xl">😄</span>
-                  ) : (
-                    <span className="text-6xl">😢</span>
-                  )}
+              <div className="mb-3 drop-shadow-xl transform transition-transform duration-300 hover:scale-110">
+                {isGoodPosture ? (
+                  <span className="text-6xl">😄</span>
+                ) : (
+                  <span className="text-6xl">😢</span>
+                )}
+              </div>
+              <div
+                className={`px-8 py-3 rounded-full font-extrabold text-lg shadow-xl backdrop-blur-md transition-colors ${
+                  isGoodPosture ? 'bg-[#8BC34A]/90 text-white' : 'bg-[#FFC107]/90 text-gray-900'
+                }`}
+              >
+                {isGoodPosture ? '바른 자세 유지 중!' : '앗, 거북목 주의!'}
+              </div>
+              {postureProba !== null && (
+                <div className="mt-2 px-4 py-1 rounded-full bg-black/50 backdrop-blur-sm text-xs font-bold text-gray-200">
+                  거북목 확률 {Math.round(postureProba * 100)}%
                 </div>
-                <div
-                  className={`px-8 py-3 rounded-full font-extrabold text-lg shadow-xl backdrop-blur-md transition-colors ${
-                    isGoodPosture ? 'bg-[#8BC34A]/90 text-white' : 'bg-[#FFC107]/90 text-gray-900'
-                  }`}
-                >
-                  {isGoodPosture ? '바른 자세 유지 중!' : '앗, 거북목 주의!'}
-                </div>
-              </>
+              )}
             </div>
           )}
 
