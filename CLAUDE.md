@@ -26,13 +26,6 @@ cd server
 # 빌드
 ./gradlew build
 
-# 테스트 전체 실행
-./gradlew test
-
-# 단일 테스트 클래스 실행
-./gradlew test --tests "site.kkobuk.server.ServerApplicationTests"
-```
-
 ### Client (Electron + React)
 
 ```bash
@@ -51,7 +44,8 @@ npm run format        # Prettier 포맷
 ```bash
 cd ai/fastapi
 pip install -r requirements.txt
-uvicorn main:app --reload
+cp .env.example .env   # 환경변수 설정 후
+uvicorn main:app --reload --env-file .env
 ```
 
 ### Infrastructure (로컬 개발)
@@ -74,10 +68,11 @@ docker-compose down     # 컨테이너 종료
 **`domain/`** — 비즈니스 도메인별 레이어드 아키텍처
 - `member/` — 회원 관리 (entity, repository, service, controller, dto)
 - `posture/` — 자세 세션 기록 (entity, repository, service, controller, dto)
+- `training/` — 학습 데이터 업로드 및 Lambda 호출 (controller, service, dto)
 
 **`global/`** — 횡단 관심사
-- `auth/` — JWT (`JwtProvider`), OAuth2 (`CustomOAuth2UserService`, `OAuth2SuccessHandler`), 리프레시 토큰 서비스
-- `config/` — `SecurityConfig`, `JpaConfig`
+- `auth/` — JWT (`JwtProvider`), OAuth2 (`CustomOAuth2UserService`, `OAuth2SuccessHandler`), 리프레시 토큰 서비스, 토큰 재발급 (`AuthController`)
+- `config/` — `SecurityConfig`, `JpaConfig`, `AwsConfig`
 - `error/` — `ErrorCode` enum, `GlobalExceptionHandler`, 커스텀 예외
 - `common/` — 베이스 엔티티
 
@@ -87,34 +82,39 @@ docker-compose down     # 컨테이너 종료
 2. `OAuth2SuccessHandler`가 JWT 액세스 토큰(24h)과 리프레시 토큰(30d) 발급
 3. 리프레시 토큰은 Redis에 저장
 4. 딥링크 `kkobuk://callback`으로 Electron 클라이언트에 토큰 전달
+5. 클라이언트는 토큰 저장 후 AI 서버(`GET /api/models`)로 학습 모델 유무 확인 → 모델 있으면 `/main`, 없으면 `/onboarding`으로 분기
+6. API 요청 중 401 응답 시 `POST /auth/reissue`로 토큰 재발급, 실패 시 로그인 페이지로 이동
 
 ### AI Service — 구조
 
 ```
 ai/
   fastapi/
-    main.py          # FastAPI 인스턴스, 라우터 등록
+    main.py          # FastAPI 인스턴스, 라우터 등록, CORS 설정
     requirements.txt
     app/
-      api/           # 엔드포인트 (APIRouter)
+      api/
+        model.py     # GET /api/models, PUT /api/models/{id}/activate
+        posture.py   # WebSocket /ws/posture (실시간 자세 추론)
       core/
+        auth.py      # JWT 검증 (FastAPI 전용, Spring Boot 시크릿 공유)
         database.py  # SQLAlchemy 엔진/세션, AI_DATABASE_URL 환경변수
       models/
         ai_metadata.py  # TrainingDataMetadata, TrainedModelMetadata, ModelStatus ENUM
-      services/      # 비즈니스 로직 (추론 등)
+      services/
+        inference.py # 모델 로드(LRU 캐시), predict, build_baseline
   lambda/
     handler.py       # Lambda 핸들러 (학습 파이프라인)
     requirements.txt
   shared/
-    auth.py          # JWT 검증 공통 모듈 (FastAPI/Lambda 공용, PyJWT)
     preprocessing_V1.py
-    preprocessing_V2.py
+    preprocessing_V2.py  # compute_baseline, extract_features (Lambda/FastAPI 공용)
 ```
 
 - AI 서비스 전용 RDB (RDS 내 별도 DB `kkobuk_ai`) 사용
 - 학습 데이터 및 모델 파일은 S3 저장, 메타데이터만 RDB 관리
 - `ModelStatus`: `ACTIVE`(선택된 모델) / `INACTIVE`
-- `ai/shared/auth.py` — Spring Boot의 JWT 시크릿 키를 공유해 동일 알고리즘(HS256/384/512)으로 검증
+- `model_bundle` 형식: `{"model": LogisticRegression, "scaler": StandardScaler, "baseline": np.ndarray}` — Lambda가 `pickle.dumps`로 저장
 
 ### Client — 구조
 
@@ -123,11 +123,23 @@ src/
   main/        # Electron 메인 프로세스
   preload/     # IPC 브릿지
   renderer/src/
-    App.jsx          # HashRouter 루트
-    pages/           # Login, Onboarding, Training, Main, Dashboard, Settings
-    components/      # 공통 컴포넌트 (예: TitleBar)
+    App.jsx          # HashRouter 루트, WebcamProvider
+    pages/           # Login, Onboarding, Training, Main, Settings
+    components/
+      common/TitleBar.jsx  # 창 컨트롤 바 (최소화/닫기)
+    context/
+      WebcamContext.jsx    # 웹캠 스트림/권한 전역 관리
+    utils/
+      api.js         # apiFetch (Spring Boot), aiFetch (FastAPI) — 401 시 자동 토큰 갱신
     assets/          # CSS (Tailwind)
 ```
+
+**페이지 라우팅:**
+- `/` → Login (OAuth2, 토큰 확인 후 자동 분기)
+- `/onboarding` → Onboarding (웹캠 권한 요청)
+- `/training` → Training (자세 데이터 수집 + 모델 학습 요청)
+- `/main` → Main (실시간 자세 추론, 위젯 모드)
+- `/settings` → Settings (모델 활성화, 알림 설정, 로그아웃)
 
 ### 엔티티 관계
 
@@ -137,24 +149,46 @@ src/
 
 ## Configuration
 
-`server/.env` 파일에 아래 환경변수 필요:
+`server/.env` (→ `server/.env.example` 참고):
 ```
+# OAuth2
 GOOGLE_CLIENT_ID=
 GOOGLE_CLIENT_SECRET=
 KAKAO_CLIENT_ID=
 KAKAO_CLIENT_SECRET=
+
+# JWT
 JWT_SECRET_KEY=
+
+# Database (prod only)
+SPRING_DATASOURCE_URL=
+SPRING_DATASOURCE_USERNAME=
+SPRING_DATASOURCE_PASSWORD=
+
+# Redis (prod only)
+SPRING_REDIS_HOST=
+SPRING_REDIS_PASSWORD=
+
+# AWS (prod only)
+AWS_REGION=
+S3_BUCKET_NAME=
+LAMBDA_FUNCTION_NAME=
 ```
 
-`ai/fastapi`의 환경변수:
+`client/.env` (→ `client/.env.example` 참고):
 ```
-AI_DATABASE_URL=mysql+pymysql://user:password@host:3306/kkobuk_ai
+VITE_API_BASE_URL=
+VITE_AI_BASE_URL=
+VITE_AI_WS_URL=
+```
+
+`ai/fastapi/.env` (→ `ai/fastapi/.env.example` 참고):
+```
+AI_DATABASE_URL=
 JWT_SECRET_KEY=
-REDIS_HOST=          # API EC2 사설 IP
+REDIS_HOST=      # 로컬: 127.0.0.1 / prod: EC2 #1 VPC private IP
 REDIS_PASSWORD=
 ```
-
-`server/src/main/resources/application.yml` — DB(MySQL localhost:3306/kkobuk), Redis(localhost:6379), JPA DDL auto-update 설정 포함
 
 ## Code Style
 
