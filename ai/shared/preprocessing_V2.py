@@ -26,9 +26,9 @@ def _extract_raw_features(landmarks: dict) -> list[float]:
     d_ears_3d = _euclidean_3d(left_ear, right_ear)
     f1 = d_ears_3d / d_shoulders_2d
 
-    d_nose_left_ear = _euclidean_3d(nose, left_ear)
-    d_nose_right_ear = _euclidean_3d(nose, right_ear)
-    f2 = ((d_nose_left_ear + d_nose_right_ear) / 2) / d_shoulders_2d
+    ear_mid_y = (left_ear["y"] + right_ear["y"]) / 2
+    shoulder_mid_y = (left_shoulder["y"] + right_shoulder["y"]) / 2
+    f2 = (shoulder_mid_y - ear_mid_y) / d_shoulders_2d
 
     shoulder_mid = {
         "x": (left_shoulder["x"] + right_shoulder["x"]) / 2,

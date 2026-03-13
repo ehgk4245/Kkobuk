@@ -22,17 +22,17 @@ def extract_features(landmarks: dict) -> list[float]:
     d_shoulders_2d = _euclidean_2d(left_shoulder, right_shoulder)
 
     d_ears_3d = _euclidean_3d(left_ear, right_ear)
-    feature1 = d_ears_3d / d_shoulders_2d
+    f1 = d_ears_3d / d_shoulders_2d
 
-    d_nose_left_ear = _euclidean_3d(nose, left_ear)
-    d_nose_right_ear = _euclidean_3d(nose, right_ear)
-    feature2 = ((d_nose_left_ear + d_nose_right_ear) / 2) / d_shoulders_2d
+    ear_mid_y = (left_ear["y"] + right_ear["y"]) / 2
+    shoulder_mid_y = (left_shoulder["y"] + right_shoulder["y"]) / 2
+    f2 = (shoulder_mid_y - ear_mid_y) / d_shoulders_2d
 
     shoulder_mid = {
         "x": (left_shoulder["x"] + right_shoulder["x"]) / 2,
         "y": (left_shoulder["y"] + right_shoulder["y"]) / 2,
     }
     d_nose_shoulder_mid = _euclidean_2d(nose, shoulder_mid)
-    feature3 = d_nose_shoulder_mid / d_shoulders_2d
+    f3 = d_nose_shoulder_mid / d_shoulders_2d
 
-    return [feature1, feature2, feature3]
+    return [f1, f2, f3]
