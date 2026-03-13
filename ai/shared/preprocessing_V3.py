@@ -1,0 +1,51 @@
+import math
+import numpy as np
+
+
+def _euclidean_2d(p1: dict, p2: dict) -> float:
+    return math.sqrt((p1["x"] - p2["x"]) ** 2 + (p1["y"] - p2["y"]) ** 2)
+
+
+def _euclidean_3d(p1: dict, p2: dict) -> float:
+    return math.sqrt(
+        (p1["x"] - p2["x"]) ** 2
+        + (p1["y"] - p2["y"]) ** 2
+        + (p1["z"] - p2["z"]) ** 2
+    )
+
+
+def _extract_raw_features(landmarks: dict) -> list[float]:
+    left_ear = landmarks["leftEar"]
+    right_ear = landmarks["rightEar"]
+    left_shoulder = landmarks["leftShoulder"]
+    right_shoulder = landmarks["rightShoulder"]
+
+    d_shoulders_2d = _euclidean_2d(left_shoulder, right_shoulder)
+
+    d_ears_3d = _euclidean_3d(left_ear, right_ear)
+    f1 = d_ears_3d / d_shoulders_2d
+
+    ear_mid_y = (left_ear["y"] + right_ear["y"]) / 2
+    shoulder_mid_y = (left_shoulder["y"] + right_shoulder["y"]) / 2
+    f2 = (shoulder_mid_y - ear_mid_y) / d_shoulders_2d
+
+    return [f1, f2]
+
+
+def compute_baseline(normal_samples: list[dict]) -> np.ndarray:
+    features = []
+    for sample in normal_samples:
+        landmarks = {
+            "leftEar": sample["leftEar"],
+            "rightEar": sample["rightEar"],
+            "leftShoulder": sample["leftShoulder"],
+            "rightShoulder": sample["rightShoulder"],
+        }
+        features.append(_extract_raw_features(landmarks))
+    return np.mean(features, axis=0)
+
+
+def extract_features(landmarks: dict, baseline: np.ndarray) -> list[float]:
+    raw = _extract_raw_features(landmarks)
+    diff = [r - b for r, b in zip(raw, baseline)]
+    return diff

@@ -10,7 +10,7 @@ import pymysql
 from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import StandardScaler
 
-from shared.preprocessing_V2 import compute_baseline, extract_features
+from shared.preprocessing_V3 import compute_baseline, extract_features
 
 S3_BUCKET = os.environ["S3_BUCKET_NAME"]
 DB_URL = os.environ["AI_DATABASE_URL"]
@@ -58,7 +58,6 @@ def handler(event, context):
     X, y = [], []
     for s in samples:
         landmarks = {
-            "nose": s["nose"],
             "leftEar": s["leftEar"],
             "rightEar": s["rightEar"],
             "leftShoulder": s["leftShoulder"],
