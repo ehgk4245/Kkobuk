@@ -41,9 +41,10 @@ const BASELINE_INTERVAL_MS = 200
 const FRAME_INTERVAL_MS = 500
 const AI_WS_URL = import.meta.env.VITE_AI_WS_URL
 
-function playNotificationSound(volume) {
+async function playNotificationSound(volume) {
   try {
     const ctx = new AudioContext()
+    await ctx.resume()
     const osc = ctx.createOscillator()
     const gain = ctx.createGain()
     osc.connect(gain)
