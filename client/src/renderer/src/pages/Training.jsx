@@ -158,6 +158,16 @@ export default function Training() {
     animFrameRef.current = requestAnimationFrame(collect)
   }, [])
 
+  const handleCancelCapture = useCallback(() => {
+    if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current)
+    if (prepTimerRef.current) clearInterval(prepTimerRef.current)
+    setCapturePhase(null)
+    setCaptureMode(null)
+    setCountdown(0)
+    setElapsedSec(0)
+    setFrameCount(0)
+  }, [])
+
   const handleCapture = useCallback(
     (mode) => {
       if (!mpReady || isCapturing || isTraining || isComplete) return
@@ -218,12 +228,18 @@ export default function Training() {
         <h1 className="text-3xl font-extrabold text-[#4CAF50] tracking-tight flex items-center justify-center gap-2">
           AI 모델 맞춤 학습 <img src={logo} alt="꼬북이" className="w-12 h-12" />
         </h1>
-        <p className="text-gray-400 mt-3 text-sm md:text-base max-w-lg mx-auto leading-relaxed">
-          더욱 정확한 거북목 감지를 위해 회원님의 평소 자세를 학습합니다.
-          <br />
-          버튼을 누르면 <strong>5초 후</strong> 데이터 추출이 시작되고{' '}
-          <strong>1분 간 자세를 유지</strong>해 주세요!
-        </p>
+        <div className="mt-3 flex flex-col items-center gap-1 text-sm md:text-base">
+          <p className="text-gray-400">
+            더욱 정확한 거북목 감지를 위해 회원님의 평소 자세를 학습합니다.
+          </p>
+          <p className="text-gray-400 whitespace-nowrap">
+            버튼을 누르면 <strong>5초 후</strong> 데이터 추출이 시작되고{' '}
+            <strong>1분 간 자세를 유지</strong>해 주세요!
+          </p>
+          <p className="text-yellow-400/80 whitespace-nowrap">
+            ⚠ 촬영 시 <strong>어깨부터 얼굴 전체</strong>가 화면에 나오도록 정면을 바라봐 주세요.
+          </p>
+        </div>
 
         <div className="mt-2 flex items-center justify-center gap-2 text-xs">
           {!mpReady && !mpError && (
@@ -275,6 +291,12 @@ export default function Training() {
                 {countdown}
               </div>
               <p className="text-gray-400 text-sm">초 후 시작</p>
+              <button
+                onClick={handleCancelCapture}
+                className="mt-2 px-4 py-1.5 rounded-full text-sm font-semibold bg-white/10 hover:bg-white/20 text-white transition"
+              >
+                취소
+              </button>
             </div>
           )}
 
@@ -296,12 +318,12 @@ export default function Training() {
                 </div>
               </div>
 
-              <div className="absolute bottom-5 left-5 right-5 pointer-events-none">
-                <div className="flex justify-between text-xs text-gray-300 mb-1 px-0.5">
+              <div className="absolute bottom-5 left-5 right-5">
+                <div className="flex justify-between text-xs text-gray-300 mb-1 px-0.5 pointer-events-none">
                   <span>수집 진행률</span>
                   <span>{Math.round((elapsedSec / COLLECT_SECONDS) * 100)}%</span>
                 </div>
-                <div className="h-2 bg-black/50 rounded-full overflow-hidden">
+                <div className="h-2 bg-black/50 rounded-full overflow-hidden pointer-events-none">
                   <div
                     className="h-full rounded-full transition-all duration-1000 ease-linear"
                     style={{
@@ -309,6 +331,14 @@ export default function Training() {
                       backgroundColor: modeColor
                     }}
                   />
+                </div>
+                <div className="flex justify-center mt-3">
+                  <button
+                    onClick={handleCancelCapture}
+                    className="px-4 py-1.5 rounded-full text-sm font-semibold bg-white/10 hover:bg-white/20 text-white transition"
+                  >
+                    취소
+                  </button>
                 </div>
               </div>
             </>
@@ -326,11 +356,9 @@ export default function Training() {
         </div>
 
         <div className="mt-10 flex gap-6 w-full max-w-2xl px-4">
-          <button
-            onClick={() => handleCapture('good')}
-            disabled={!mpReady || isCapturing || isTraining || isComplete}
-            className={`flex-1 bg-gray-800 hover:bg-gray-700 rounded-3xl p-6 transition-all duration-300 transform hover:-translate-y-1 shadow-md border disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 ${
-              capturedGood ? 'border-[#8BC34A] scale-[1.02] shadow-lg' : 'border-transparent'
+          <div
+            className={`flex-1 bg-gray-800 rounded-3xl p-6 shadow-md border ${
+              capturedGood ? 'border-[#8BC34A] shadow-lg' : 'border-transparent'
             }`}
           >
             <div className="flex flex-col items-center gap-4">
@@ -348,14 +376,19 @@ export default function Training() {
                   바른 자세를 취해 주세요
                 </div>
               </div>
+              <button
+                onClick={() => handleCapture('good')}
+                disabled={!mpReady || isCapturing || isTraining || isComplete}
+                className="mt-1 px-5 py-1.5 rounded-full text-sm font-semibold border border-[#8BC34A] text-[#8BC34A] hover:bg-[#8BC34A]/10 transition disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+              >
+                {capturedGood ? '다시 학습하기' : '학습하기'}
+              </button>
             </div>
-          </button>
+          </div>
 
-          <button
-            onClick={() => handleCapture('bad')}
-            disabled={!mpReady || isCapturing || isTraining || isComplete}
-            className={`flex-1 bg-gray-800 hover:bg-gray-700 rounded-3xl p-6 transition-all duration-300 transform hover:-translate-y-1 shadow-md border disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 ${
-              capturedBad ? 'border-[#FFC107] scale-[1.02] shadow-lg' : 'border-transparent'
+          <div
+            className={`flex-1 bg-gray-800 rounded-3xl p-6 shadow-md border ${
+              capturedBad ? 'border-[#FFC107] shadow-lg' : 'border-transparent'
             }`}
           >
             <div className="flex flex-col items-center gap-4">
@@ -373,8 +406,15 @@ export default function Training() {
                   자세를 취해 주세요
                 </div>
               </div>
+              <button
+                onClick={() => handleCapture('bad')}
+                disabled={!mpReady || isCapturing || isTraining || isComplete}
+                className="mt-1 px-5 py-1.5 rounded-full text-sm font-semibold border border-[#FFC107] text-[#FFC107] hover:bg-[#FFC107]/10 transition disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+              >
+                {capturedBad ? '다시 학습하기' : '학습하기'}
+              </button>
             </div>
-          </button>
+          </div>
         </div>
 
         {bothCaptured && !isComplete && (

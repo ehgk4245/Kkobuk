@@ -18,23 +18,24 @@ export default function Onboarding() {
 
   return (
     <div className="min-h-full h-full bg-gray-900 flex justify-center items-center p-6 font-sans relative">
-      <div className="w-full max-w-md bg-gray-800 rounded-[2.5rem] p-10 shadow-xl text-center border border-gray-700">
+      <div className="w-full max-w-xl bg-gray-800 rounded-[2.5rem] p-10 shadow-xl text-center border border-gray-700">
         <div className="text-6xl mb-6">📸</div>
         <h1 className="text-2xl font-extrabold text-white mb-3">웹캠 권한이 필요해요!</h1>
-        <p className="text-gray-400 mb-8 leading-relaxed">
-          Kkobuk은 사용자님의 자세를 실시간으로 분석하기 위해 데스크톱 웹캠 화면에 접근해야 합니다.
-          <br />
-          <strong>안심하세요!</strong> 영상은 기기 내에서만 처리되며 서버로 전송되지 않습니다.
-        </p>
+        <div className="mb-8 flex flex-col items-center gap-1.5 text-gray-400 text-sm">
+          <p>정확한 자세 분석을 위해 웹캠 접근 권한이 필요합니다.</p>
+          <p>
+            <strong className="text-white">안심하세요!</strong> 영상은 기기 내에서만 처리되며 외부로 전송되지 않습니다.
+          </p>
+        </div>
 
         <div className="bg-[#4CAF50]/10 border border-[#4CAF50]/20 rounded-2xl p-4 mb-8 text-left flex gap-4">
           <img src={logo} alt="꼬북이" className="w-14 h-14 mt-1 shrink-0" />
           <div>
-            <h3 className="font-bold text-[#4CAF50] mb-1">꼬북이의 똑똑한 가이드</h3>
-            <ul className="text-sm text-gray-300 space-y-1">
-              <li>1. 모니터와 눈높이를 수평으로 맞추세요.</li>
+            <h3 className="font-bold text-[#4CAF50] mb-2">꼬북이의 똑똑한 가이드</h3>
+            <ul className="text-sm text-gray-300 space-y-1.5">
+              <li>1. <strong className="text-white">어깨부터 얼굴 전체</strong>가 화면에 나오도록 맞춰 주세요.</li>
               <li>2. 밝은 곳에서 촬영하면 더 정확해요.</li>
-              <li>3. 정면을 똑바로 바라봐주세요.</li>
+              <li>3. 정면을 똑바로 바라봐 주세요.</li>
             </ul>
           </div>
         </div>
