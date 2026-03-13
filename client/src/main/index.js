@@ -73,6 +73,8 @@ function createWindow() {
   }
 }
 
+app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required')
+
 app.whenReady().then(() => {
   // 프로덕션에서 file:// 페이지는 Origin: null을 보내므로, API 요청에 명시적 Origin 주입
   if (!is.dev && API_BASE) {
