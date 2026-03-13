@@ -41,24 +41,6 @@ const BASELINE_INTERVAL_MS = 200
 const FRAME_INTERVAL_MS = 500
 const AI_WS_URL = import.meta.env.VITE_AI_WS_URL
 
-async function playNotificationSound(volume) {
-  try {
-    const ctx = new AudioContext()
-    await ctx.resume()
-    const osc = ctx.createOscillator()
-    const gain = ctx.createGain()
-    osc.connect(gain)
-    gain.connect(ctx.destination)
-    osc.type = 'sine'
-    osc.frequency.setValueAtTime(660, ctx.currentTime)
-    osc.frequency.setValueAtTime(880, ctx.currentTime + 0.15)
-    gain.gain.setValueAtTime(volume * 0.8, ctx.currentTime)
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5)
-    osc.start(ctx.currentTime)
-    osc.stop(ctx.currentTime + 0.5)
-    osc.onended = () => ctx.close()
-  } catch {} // eslint-disable-line no-empty
-}
 
 // trackingState:
 // 'idle' | 'connecting' | 'baseline_prompt'
@@ -172,6 +154,29 @@ export default function Main() {
   const landmarkHandlerRef = useRef(null)
   const isRecalibrationRef = useRef(false)
   const soundIntervalTimerRef = useRef(null)
+  const audioCtxRef = useRef(null)
+
+  const playNotificationSound = useCallback((volume) => {
+    try {
+      if (!audioCtxRef.current || audioCtxRef.current.state === 'closed') {
+        audioCtxRef.current = new AudioContext()
+      }
+      const ctx = audioCtxRef.current
+      ctx.resume().then(() => {
+        const osc = ctx.createOscillator()
+        const gain = ctx.createGain()
+        osc.connect(gain)
+        gain.connect(ctx.destination)
+        osc.type = 'sine'
+        osc.frequency.setValueAtTime(660, ctx.currentTime)
+        osc.frequency.setValueAtTime(880, ctx.currentTime + 0.15)
+        gain.gain.setValueAtTime(volume * 0.8, ctx.currentTime)
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5)
+        osc.start(ctx.currentTime)
+        osc.stop(ctx.currentTime + 0.5)
+      })
+    } catch {} // eslint-disable-line no-empty
+  }, [])
 
   // 세션 누적 카운터
   const goodSecRef = useRef(0)
@@ -290,7 +295,7 @@ export default function Main() {
         soundIntervalTimerRef.current = null
       }
     }
-  }, [isGoodPosture, trackingState])
+  }, [isGoodPosture, trackingState, playNotificationSound])
 
   // isGoodPosture → ref 동기화 (interval closure 안에서 읽기 위해)
   useEffect(() => {
