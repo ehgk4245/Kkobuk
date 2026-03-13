@@ -34,4 +34,14 @@ public class PostureSession extends BaseCreatedTimeEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "member_id", nullable = false, updatable = false)
     private Member member;
+
+    public static PostureSession create(Member member, int totalDurationSec, int goodPostureSec, int badPostureSec) {
+        PostureSession ps = new PostureSession();
+        ps.member = member;
+        ps.sessionDate = LocalDate.now();
+        ps.totalDurationSec = totalDurationSec;
+        ps.goodPostureSec = goodPostureSec;
+        ps.badPostureSec = badPostureSec;
+        return ps;
+    }
 }

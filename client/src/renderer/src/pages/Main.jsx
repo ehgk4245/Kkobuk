@@ -15,7 +15,7 @@ import {
 import { PoseLandmarker, FaceLandmarker, FilesetResolver } from '@mediapipe/tasks-vision'
 import { useNavigate } from 'react-router-dom'
 import { useWebcam } from '../context/WebcamContext'
-import { aiFetch, getValidToken } from '../utils/api'
+import { aiFetch, apiFetch, getValidToken } from '../utils/api'
 
 const POSE_IDX = { leftShoulder: 11, rightShoulder: 12 }
 const FACE_IDX = { nose: 4, leftEar: 234, rightEar: 454 }
@@ -24,6 +24,15 @@ const pickXYZ = ({ x, y, z }) => ({ x, y, z })
 const WASM_URL = './mediapipe-wasm'
 const POSE_MODEL_URL = './mediapipe-wasm/pose_landmarker_lite.task'
 const FACE_MODEL_URL = './mediapipe-wasm/face_landmarker.task'
+
+function formatDuration(sec) {
+  const h = Math.floor(sec / 3600)
+  const m = Math.floor((sec % 3600) / 60)
+  const s = sec % 60
+  if (h > 0) return `${h}시간 ${m}분`
+  if (m > 0) return `${m}분 ${s}초`
+  return `${s}초`
+}
 
 const PRE_COUNTDOWN_SECONDS = 3
 const BASELINE_SECONDS = 5
@@ -162,6 +171,14 @@ export default function Main() {
   const isRecalibrationRef = useRef(false)
   const soundIntervalTimerRef = useRef(null)
 
+  // 세션 누적 카운터
+  const goodSecRef = useRef(0)
+  const badSecRef = useRef(0)
+  const isGoodPostureRef = useRef(true)
+  const sessionTimerRef = useRef(null)
+  const [sessionGoodSec, setSessionGoodSec] = useState(0)
+  const [sessionBadSec, setSessionBadSec] = useState(0)
+
   // 활성 모델 존재 여부 확인
   useEffect(() => {
     aiFetch('/api/models')
@@ -272,6 +289,37 @@ export default function Main() {
     }
   }, [isGoodPosture, trackingState])
 
+  // isGoodPosture → ref 동기화 (interval closure 안에서 읽기 위해)
+  useEffect(() => {
+    isGoodPostureRef.current = isGoodPosture
+  }, [isGoodPosture])
+
+  // 트래킹 중 1초마다 good/bad 초 누적
+  useEffect(() => {
+    if (trackingState === 'tracking') {
+      sessionTimerRef.current = setInterval(() => {
+        if (isGoodPostureRef.current) {
+          goodSecRef.current += 1
+          setSessionGoodSec(goodSecRef.current)
+        } else {
+          badSecRef.current += 1
+          setSessionBadSec(badSecRef.current)
+        }
+      }, 1000)
+    } else {
+      if (sessionTimerRef.current) {
+        clearInterval(sessionTimerRef.current)
+        sessionTimerRef.current = null
+      }
+    }
+    return () => {
+      if (sessionTimerRef.current) {
+        clearInterval(sessionTimerRef.current)
+        sessionTimerRef.current = null
+      }
+    }
+  }, [trackingState])
+
   // 언마운트 시 WebSocket 정리
   useEffect(() => {
     return () => wsRef.current?.close()
@@ -346,6 +394,11 @@ export default function Main() {
     if (!mpReady) return
     setWsError(null)
     setTrackingState('connecting')
+    // 세션 카운터 초기화
+    goodSecRef.current = 0
+    badSecRef.current = 0
+    setSessionGoodSec(0)
+    setSessionBadSec(0)
 
     let token
     try {
@@ -398,11 +451,30 @@ export default function Main() {
     }
   }, [mpReady, closeWs, startFrameStreaming])
 
-  const handleStop = useCallback(() => {
+  const handleStop = useCallback(async () => {
+    const good = goodSecRef.current
+    const bad = badSecRef.current
+    const total = good + bad
+
     closeWs()
     landmarkHandlerRef.current = null
     setTrackingState('idle')
     setPostureProba(null)
+
+    if (total > 0) {
+      try {
+        await apiFetch('/api/posture/sessions', {
+          method: 'POST',
+          body: JSON.stringify({
+            totalDurationSec: total,
+            goodPostureSec: good,
+            badPostureSec: bad
+          })
+        })
+      } catch (e) {
+        console.warn('[handleStop] 세션 저장 실패:', e)
+      }
+    }
   }, [closeWs])
 
   const handlePause = useCallback(() => {
@@ -705,6 +777,32 @@ export default function Main() {
         </div>
 
         {wsError && <p className="mt-3 text-red-400 text-sm text-center">{wsError}</p>}
+
+        {isTracking && sessionGoodSec + sessionBadSec > 0 && (
+          <div className="mt-4 w-full max-w-md bg-gray-800 border border-gray-700 rounded-2xl px-5 py-3 flex items-center gap-4">
+            <span className="text-xs text-gray-500 shrink-0">현재 세션</span>
+            <div className="flex flex-1 justify-around">
+              <div className="text-center">
+                <p className="text-[10px] text-gray-500">바른 자세</p>
+                <p className="text-sm font-extrabold text-[#8BC34A]">
+                  {formatDuration(sessionGoodSec)}
+                </p>
+              </div>
+              <div className="text-center">
+                <p className="text-[10px] text-gray-500">거북목</p>
+                <p className="text-sm font-extrabold text-[#FFC107]">
+                  {formatDuration(sessionBadSec)}
+                </p>
+              </div>
+              <div className="text-center">
+                <p className="text-[10px] text-gray-500">바른 자세율</p>
+                <p className="text-sm font-extrabold text-white">
+                  {Math.round((sessionGoodSec / (sessionGoodSec + sessionBadSec)) * 100)}%
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="mt-8 flex gap-4 w-full max-w-md">
           {hasActiveModel === false ? (

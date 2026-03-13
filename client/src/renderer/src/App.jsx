@@ -5,6 +5,7 @@ import Onboarding from './pages/Onboarding'
 import Training from './pages/Training'
 import MainScreen from './pages/Main'
 import Settings from './pages/Settings'
+import Stats from './pages/Stats'
 import { WebcamProvider } from './context/WebcamContext'
 
 export default function App() {
@@ -19,7 +20,8 @@ export default function App() {
               <Route path="/onboarding" element={<Onboarding />} />
               <Route path="/training" element={<Training />} />
               <Route path="/main" element={<MainScreen />} />
-<Route path="/settings" element={<Settings />} />
+              <Route path="/settings" element={<Settings />} />
+              <Route path="/stats" element={<Stats />} />
             </Routes>
           </div>
         </div>
