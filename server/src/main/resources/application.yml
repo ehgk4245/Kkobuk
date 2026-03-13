@@ -57,4 +57,4 @@ ai:
   base-url: http://localhost:8000
 training:
   model-limit: 5
-  min-sample-count: 500
+  min-sample-count: 250

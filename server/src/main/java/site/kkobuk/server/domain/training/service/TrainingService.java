@@ -49,7 +49,7 @@ public class TrainingService {
     public void uploadAndTrain(Long memberId, TrainingUploadRequest request, String accessToken) {
         if (request.samples().size() < minSampleCount) {
             throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE,
-                    "학습 데이터 측정에 실패했습니다. 어깨부터 얼굴 전체가 나오는 정면을 바라보고 다시 측정해 주세요.");
+                    "학습 데이터 샘플 부족으로 측정에 실패했습니다. 어깨부터 얼굴 전체가 나오는 정면을 바라보고 다시 측정해 주세요.");
         }
         checkModelLimit(accessToken);
         String s3Key = uploadToS3(memberId, request);

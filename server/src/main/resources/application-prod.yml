@@ -58,4 +58,4 @@ ai:
   base-url: ${AI_BASE_URL}
 training:
   model-limit: 5
-  min-sample-count: 500
+  min-sample-count: 250
