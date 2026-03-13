@@ -7,7 +7,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 import site.kkobuk.server.domain.posture.dto.PostureSessionSaveRequest;
-import site.kkobuk.server.domain.posture.dto.PostureSessionWeeklyResponse;
+import site.kkobuk.server.domain.posture.dto.PostureSessionDailyResponse;
 import site.kkobuk.server.domain.posture.service.PostureSessionService;
 
 import java.util.List;
@@ -30,7 +30,7 @@ public class PostureSessionController {
     }
 
     @GetMapping("/weekly")
-    public ResponseEntity<List<PostureSessionWeeklyResponse>> getWeekly(
+    public ResponseEntity<List<PostureSessionDailyResponse>> getWeekly(
             @AuthenticationPrincipal Jwt jwt
     ) {
         Long memberId = Long.valueOf(jwt.getSubject());

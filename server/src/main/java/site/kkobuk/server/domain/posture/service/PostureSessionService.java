@@ -6,7 +6,7 @@ import org.springframework.transaction.annotation.Transactional;
 import site.kkobuk.server.domain.member.entity.Member;
 import site.kkobuk.server.domain.member.repository.MemberRepository;
 import site.kkobuk.server.domain.posture.dto.PostureSessionSaveRequest;
-import site.kkobuk.server.domain.posture.dto.PostureSessionWeeklyResponse;
+import site.kkobuk.server.domain.posture.dto.PostureSessionDailyResponse;
 import site.kkobuk.server.domain.posture.entity.PostureSession;
 import site.kkobuk.server.domain.posture.repository.PostureSessionRepository;
 
@@ -35,7 +35,7 @@ public class PostureSessionService {
     }
 
     @Transactional(readOnly = true)
-    public List<PostureSessionWeeklyResponse> getWeekly(Long memberId) {
+    public List<PostureSessionDailyResponse> getWeekly(Long memberId) {
         LocalDate today = LocalDate.now();
         LocalDate from = today.minusDays(6);
 
@@ -53,12 +53,7 @@ public class PostureSessionService {
         }
 
         return byDate.entrySet().stream()
-                .map(e -> new PostureSessionWeeklyResponse(
-                        e.getKey().toString(),
-                        e.getValue()[0],
-                        e.getValue()[1],
-                        e.getValue()[2]
-                ))
+                .map(e -> PostureSessionDailyResponse.from(e.getKey(), e.getValue()))
                 .toList();
     }
 }
