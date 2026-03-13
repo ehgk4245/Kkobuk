@@ -10,7 +10,8 @@ import {
   PictureInPicture2,
   RefreshCw,
   Loader2,
-  AlertTriangle
+  AlertTriangle,
+  BarChart2
 } from 'lucide-react'
 import { PoseLandmarker, FaceLandmarker, FilesetResolver } from '@mediapipe/tasks-vision'
 import { useNavigate } from 'react-router-dom'
@@ -176,6 +177,7 @@ export default function Main() {
   const badSecRef = useRef(0)
   const isGoodPostureRef = useRef(true)
   const sessionTimerRef = useRef(null)
+  const sessionSavedRef = useRef(false) // 중복 저장 방지
   const [sessionGoodSec, setSessionGoodSec] = useState(0)
   const [sessionBadSec, setSessionBadSec] = useState(0)
 
@@ -320,9 +322,29 @@ export default function Main() {
     }
   }, [trackingState])
 
-  // 언마운트 시 WebSocket 정리
+  // 언마운트 / 앱 종료 시 세션 저장 (중복 방지: sessionSavedRef)
   useEffect(() => {
-    return () => wsRef.current?.close()
+    const flushSession = () => {
+      const good = goodSecRef.current
+      const bad = badSecRef.current
+      const total = good + bad
+      if (total === 0 || sessionSavedRef.current) return
+      sessionSavedRef.current = true
+      const token = localStorage.getItem('accessToken')
+      fetch(`${import.meta.env.VITE_API_BASE_URL}/api/posture/sessions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ totalDurationSec: total, goodPostureSec: good, badPostureSec: bad }),
+        keepalive: true
+      }).catch(() => {})
+    }
+
+    window.addEventListener('beforeunload', flushSession)
+    return () => {
+      window.removeEventListener('beforeunload', flushSession)
+      wsRef.current?.close()
+      flushSession() // 페이지 이동(unmount) 시
+    }
   }, [])
 
   const closeWs = useCallback(() => {
@@ -397,6 +419,7 @@ export default function Main() {
     // 세션 카운터 초기화
     goodSecRef.current = 0
     badSecRef.current = 0
+    sessionSavedRef.current = false
     setSessionGoodSec(0)
     setSessionBadSec(0)
 
@@ -462,6 +485,7 @@ export default function Main() {
     setPostureProba(null)
 
     if (total > 0) {
+      sessionSavedRef.current = true
       try {
         await apiFetch('/api/posture/sessions', {
           method: 'POST',
@@ -668,6 +692,14 @@ export default function Main() {
           >
             <PictureInPicture2 size={18} className="text-blue-400" />
             <span className="text-sm font-bold text-gray-200">위젯 모드</span>
+          </button>
+          <button
+            onClick={() => navigate('/stats')}
+            className="flex items-center gap-2 px-4 py-2.5 bg-gray-800 rounded-2xl shadow-sm hover:bg-gray-700 transition border border-gray-700 hover:border-gray-600"
+            title="주간 통계"
+          >
+            <BarChart2 size={18} className="text-[#8BC34A]" />
+            <span className="text-sm font-bold text-gray-200">통계</span>
           </button>
           <button
             onClick={() => navigate('/settings')}

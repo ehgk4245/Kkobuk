@@ -10,7 +10,6 @@ import {
   Cell,
   PieChart,
   Pie,
-  Legend,
   ResponsiveContainer
 } from 'recharts'
 import { apiFetch } from '../utils/api'
@@ -132,7 +131,12 @@ export default function Stats() {
                         )
                       }}
                     />
-                    <Bar dataKey="goodPostureSec" stackId="a" fill="#8BC34A">
+                    <Bar
+                      dataKey="goodPostureSec"
+                      stackId="a"
+                      cursor="pointer"
+                      onClick={(data) => data?.date && setSelectedDate(data.date)}
+                    >
                       {weekData.map((entry) => (
                         <Cell
                           key={entry.date}
@@ -140,7 +144,13 @@ export default function Stats() {
                         />
                       ))}
                     </Bar>
-                    <Bar dataKey="badPostureSec" stackId="a" radius={[4, 4, 0, 0]}>
+                    <Bar
+                      dataKey="badPostureSec"
+                      stackId="a"
+                      radius={[4, 4, 0, 0]}
+                      cursor="pointer"
+                      onClick={(data) => data?.date && setSelectedDate(data.date)}
+                    >
                       {weekData.map((entry) => (
                         <Cell
                           key={entry.date}
@@ -220,7 +230,7 @@ export default function Stats() {
 
             {selectedData.totalDurationSec > 0 ? (
               <>
-                <ResponsiveContainer width="100%" height={160}>
+                <ResponsiveContainer width="100%" height={150}>
                   <PieChart>
                     <Pie
                       data={[
@@ -238,16 +248,15 @@ export default function Stats() {
                       <Cell fill="#8BC34A" />
                       <Cell fill="#FFC107" />
                     </Pie>
-                    <Legend
-                      formatter={(value) => (
-                        <span style={{ color: '#d1d5db', fontSize: 12 }}>{value}</span>
-                      )}
-                    />
                   </PieChart>
                 </ResponsiveContainer>
-                <div className="flex justify-around mt-2">
+                {/* 커스텀 범례 + 수치 (순서 직접 제어) */}
+                <div className="flex justify-around mt-1">
                   <div className="text-center">
-                    <p className="text-xs text-gray-500 mb-0.5">바른 자세</p>
+                    <div className="flex items-center justify-center gap-1.5 mb-1">
+                      <span className="w-2.5 h-2.5 rounded-sm bg-[#8BC34A] shrink-0" />
+                      <p className="text-xs text-gray-400">바른 자세</p>
+                    </div>
                     <p className="font-extrabold text-[#8BC34A]">
                       {Math.round(
                         (selectedData.goodPostureSec / selectedData.totalDurationSec) * 100
@@ -259,7 +268,10 @@ export default function Stats() {
                     </p>
                   </div>
                   <div className="text-center">
-                    <p className="text-xs text-gray-500 mb-0.5">거북목</p>
+                    <div className="flex items-center justify-center gap-1.5 mb-1">
+                      <span className="w-2.5 h-2.5 rounded-sm bg-[#FFC107] shrink-0" />
+                      <p className="text-xs text-gray-400">거북목</p>
+                    </div>
                     <p className="font-extrabold text-[#FFC107]">
                       {Math.round(
                         (selectedData.badPostureSec / selectedData.totalDurationSec) * 100
