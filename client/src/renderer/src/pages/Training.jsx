@@ -7,7 +7,7 @@ import { useWebcam } from '../context/WebcamContext'
 import { apiFetch } from '../utils/api'
 
 const PREPARE_SECONDS = 5
-const COLLECT_SECONDS = 60
+const COLLECT_SECONDS = 30
 const LABEL = { good: 0, bad: 1 }
 const SAMPLE_INTERVAL_MS = 200
 
@@ -234,7 +234,7 @@ export default function Training() {
           </p>
           <p className="text-gray-400 whitespace-nowrap">
             버튼을 누르면 <strong>5초 후</strong> 데이터 추출이 시작되고{' '}
-            <strong>1분 간 자세를 유지</strong>해 주세요!
+            각 자세별로 <strong>30초간 유지</strong>해 주세요!
           </p>
           <p className="text-yellow-400/80 whitespace-nowrap">
             ⚠ 촬영 시 <strong>어깨부터 얼굴 전체</strong>가 화면에 나오도록 정면을 바라봐 주세요.
