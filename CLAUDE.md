@@ -5,6 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Project Overview
 
 **Kkobuk**는 자세 교정 데스크탑 애플리케이션으로, 네 개의 모듈로 구성됩니다:
+
 - `server/` — Spring Boot 4.0.2 + Java 25 백엔드 (OAuth2 + JWT 인증) → `api.kkobuk.site`
 - `client/` — Electron 39 + React 19 + Vite 데스크탑 프론트엔드
 - `ai/` — AI 관련 코드 전체
@@ -25,6 +26,7 @@ cd server
 
 # 빌드
 ./gradlew build
+```
 
 ### Client (Electron + React)
 
@@ -66,11 +68,13 @@ docker-compose down     # 컨테이너 종료
 `site.kkobuk.server` 아래 두 가지 최상위 패키지로 나뉩니다:
 
 **`domain/`** — 비즈니스 도메인별 레이어드 아키텍처
+
 - `member/` — 회원 관리 (entity, repository, service, controller, dto)
 - `posture/` — 자세 세션 기록 (entity, repository, service, controller, dto)
 - `training/` — 학습 데이터 업로드 및 Lambda 호출 (controller, service, dto)
 
 **`global/`** — 횡단 관심사
+
 - `auth/` — JWT (`JwtProvider`), OAuth2 (`CustomOAuth2UserService`, `OAuth2SuccessHandler`), 리프레시 토큰 서비스, 토큰 재발급 (`AuthController`)
 - `config/` — `SecurityConfig`, `JpaConfig`, `AwsConfig`
 - `error/` — `ErrorCode` enum, `GlobalExceptionHandler`, 커스텀 예외
@@ -124,7 +128,7 @@ src/
   preload/     # IPC 브릿지
   renderer/src/
     App.jsx          # HashRouter 루트, WebcamProvider
-    pages/           # Login, Onboarding, Training, Main, Settings
+    pages/           # Login, Onboarding, Training, Main, Stats, Settings
     components/
       common/TitleBar.jsx  # 창 컨트롤 바 (최소화/닫기)
     context/
@@ -135,21 +139,18 @@ src/
 ```
 
 **페이지 라우팅:**
+
 - `/` → Login (OAuth2, 토큰 확인 후 자동 분기)
 - `/onboarding` → Onboarding (웹캠 권한 요청)
 - `/training` → Training (자세 데이터 수집 + 모델 학습 요청)
 - `/main` → Main (실시간 자세 추론, 위젯 모드)
+- `/stats` → Stats (자세 측정 통계 및 기록)
 - `/settings` → Settings (모델 활성화, 알림 설정, 로그아웃)
-
-### 엔티티 관계
-
-- `Member` — 사용자 기본 정보
-- `SocialAccount` — OAuth2 소셜 로그인 정보 (Member와 별도 분리)
-- `PostureSession` — 자세 측정 세션 데이터
 
 ## Configuration
 
 `server/.env` (→ `server/.env.example` 참고):
+
 ```
 # OAuth2
 GOOGLE_CLIENT_ID=
@@ -179,6 +180,7 @@ AI_BASE_URL=
 ```
 
 `client/.env` (→ `client/.env.example` 참고):
+
 ```
 VITE_API_BASE_URL=
 VITE_AI_BASE_URL=
@@ -186,6 +188,7 @@ VITE_AI_WS_URL=
 ```
 
 `ai/fastapi/.env` (→ `ai/fastapi/.env.example` 참고):
+
 ```
 AI_DATABASE_URL=
 JWT_SECRET_KEY=
