@@ -1,4 +1,4 @@
-# Kkobuk 🐢
+# <img src="client/resources/icon.png" width="48" align="center"> Kkobuk
 
 거북목을 실시간으로 감지하고 교정을 도와주는 데스크탑 애플리케이션입니다.
 웹캠으로 사용자의 자세를 분석해 거북목이 감지되면 즉시 알림을 보냅니다.
@@ -45,20 +45,7 @@ Kkobuk/
 
 ### 아키텍처
 
-```
-[Electron 클라이언트]
-        │  MediaPipe로 포즈 랜드마크 추출
-        │
-        ├── HTTPS ──▶ api.kkobuk.site  (Spring Boot)
-        │                  ├── OAuth2 로그인 (Google / 카카오)
-        │                  ├── JWT 인증 / 자세 세션 기록
-        │                  └── AWS SDK ──▶ Lambda (학습 파이프라인)
-        │                                      └── LR 모델 학습 → S3 저장
-        │                                                          → kkobuk_ai DB 저장
-        │
-        └── WSS ────▶ ai.kkobuk.site   (FastAPI)
-                           └── 랜드마크 수신 → LR 모델 추론 → 자세 판별 결과 반환
-```
+![아키텍처](docs/architecture.png)
 
 ---
 
