@@ -119,6 +119,8 @@ ai/
 - 학습 데이터 및 모델 파일은 S3 저장, 메타데이터만 RDB 관리
 - `ModelStatus`: `ACTIVE`(선택된 모델) / `INACTIVE`
 - `model_bundle` 형식: `{"model": LogisticRegression, "scaler": StandardScaler, "baseline": np.ndarray}` — Lambda가 `pickle.dumps`로 저장
+- 모델 캐시: `model_id`를 키로 인메모리 LRU 캐시 (100개). 모델 교체 시 DB의 ACTIVE model_id가 바뀌므로 캐시 무효화 불필요 → 수평 확장 시 인스턴스 간 캐시 동기화 없이 동작
+- **수평 확장**: EC2 LB(Nginx) → EC2 #2(FastAPI) 구조. EC2 추가 시 LB upstream에 등록만 하면 됨
 
 ### Client — 구조
 

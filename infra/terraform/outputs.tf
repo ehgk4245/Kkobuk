@@ -3,6 +3,11 @@ output "ec2_api_public_ip" {
   value       = aws_eip.api.public_ip
 }
 
+output "ec2_ai_lb_public_ip" {
+  description = "AI LB 서버 Elastic IP → DNS (ai.kkobuk.site) 에 등록"
+  value       = aws_eip.ai_lb.public_ip
+}
+
 output "ec2_ai_public_ip" {
   description = "EC2 AI 서버 Elastic IP (GitHub Actions Secrets: EC2_AI_HOST)"
   value       = aws_eip.ai.public_ip

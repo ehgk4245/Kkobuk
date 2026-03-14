@@ -171,6 +171,32 @@ resource "aws_security_group" "ec2_ai" {
     cidr_blocks = ["0.0.0.0/0"]
   }
   ingress {
+    from_port       = 80
+    to_port         = 80
+    protocol        = "tcp"
+    security_groups = [aws_security_group.ec2_lb.id]
+  }
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = { Name = "kkobuk-ec2-ai-sg" }
+}
+
+resource "aws_security_group" "ec2_lb" {
+  name   = "kkobuk-ec2-lb-sg"
+  vpc_id = aws_vpc.main.id
+
+  ingress {
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+  ingress {
     from_port   = 80
     to_port     = 80
     protocol    = "tcp"
@@ -189,7 +215,7 @@ resource "aws_security_group" "ec2_ai" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  tags = { Name = "kkobuk-ec2-ai-sg" }
+  tags = { Name = "kkobuk-ec2-lb-sg" }
 }
 
 resource "aws_security_group" "lambda" {
@@ -555,12 +581,47 @@ resource "aws_lambda_function" "training" {
 }
 
 # ============================================================
-# Elastic IP — API / AI 서버 (공인 IP 고정)
+# EC2 LB — AI 추론 서버 로드밸런서 (Nginx)
+# ============================================================
+resource "aws_instance" "ai_lb" {
+  ami                    = data.aws_ami.ubuntu.id
+  instance_type          = var.ec2_lb_instance_type
+  subnet_id              = aws_subnet.public_a.id
+  vpc_security_group_ids = [aws_security_group.ec2_lb.id]
+  key_name               = var.ec2_key_pair
+
+  user_data = templatefile("${path.module}/user_data/lb_server.sh", {
+    domain       = var.domain_ai
+    ai_server_ip = aws_instance.ai.private_ip
+  })
+
+  metadata_options {
+    http_endpoint               = "enabled"
+    http_put_response_hop_limit = 2
+    http_tokens                 = "required"
+  }
+
+  root_block_device {
+    volume_size = 8
+    volume_type = "gp3"
+  }
+
+  tags = { Name = "kkobuk-ai-lb" }
+}
+
+# ============================================================
+# Elastic IP — API / AI LB / AI 서버
 # ============================================================
 resource "aws_eip" "api" {
   instance = aws_instance.api.id
   domain   = "vpc"
   tags     = { Name = "kkobuk-api-eip" }
+}
+
+resource "aws_eip" "ai_lb" {
+  instance = aws_instance.ai_lb.id
+  domain   = "vpc"
+  tags     = { Name = "kkobuk-ai-lb-eip" }
 }
 
 resource "aws_eip" "ai" {

@@ -10,15 +10,16 @@
         │                              ├── Redis (Docker: kkobuk-net)
         │                              └──── [RDS] kkobuk DB
         │
-        ├──── HTTPS ────▶ ai.kkobuk.site  [EC2 #2] Nginx (블루그린)  ← Elastic IP 고정
-        │                     └── FastAPI
-        │                          ├── REST API (메타데이터 조회/수정)
-        │                          └── WebSocket (실시간 자세 추론)
-        │                                   │
-        │                                   ├──── [RDS] kkobuk_ai DB
-        │                                   └──── [S3] 모델 로드 (메모리 캐시)
+        ├──── HTTPS ────▶ ai.kkobuk.site  [EC2 LB] Nginx (least_conn LB)  ← Elastic IP 고정
+        │                     └── upstream
+        │                              └── [EC2 #2] Nginx (블루그린) → FastAPI
+        │                                       ├── REST API (메타데이터 조회/수정)
+        │                                       └── WebSocket (실시간 자세 추론)
+        │                                                │
+        │                                                ├──── [RDS] kkobuk_ai DB
+        │                                                └──── [S3] 모델 로드 (model_id 키 LRU 캐시)
         │
-        └──── WSS ───────▶ ai.kkobuk.site [EC2 #2] (동일 서버, WebSocket 엔드포인트)
+        └──── WSS ───────▶ ai.kkobuk.site [EC2 LB] → [EC2 #2] (WebSocket 투명 프록시)
 
 Spring Boot REST API
     └── AWS SDK InvokeAsync ──▶ [Lambda] 학습 파이프라인
@@ -26,6 +27,8 @@ Spring Boot REST API
                                     ├── [S3] 모델 저장
                                     └── [RDS] kkobuk_ai DB 메타데이터 저장
 ```
+
+> **수평 확장**: EC2 #2를 추가하고 EC2 LB의 `/etc/nginx/conf.d/ai-upstream.conf`에 `server <private_ip>:80;` 한 줄을 추가하면 무중단으로 AI 추론 서버를 수평 확장할 수 있습니다. 모델 캐시 키가 `model_id` 기반이라 인스턴스 간 캐시 동기화가 불필요합니다.
 
 ---
 
@@ -47,15 +50,33 @@ Spring Boot REST API
 - FastAPI(EC2 #2) → Redis: VPC 사설 IP (`EC2_API_PRIVATE_IP:6379`)
 - 보안그룹: 6379 인바운드를 `ec2_ai` SG만 허용
 
-### EC2 #2 — AI 서버
+### EC2 LB — AI 추론 로드밸런서
 
 | 항목 | 내용 |
 |------|------|
 | 도메인 | `ai.kkobuk.site` |
+| 역할 | Nginx 리버스 프록시 / 로드밸런서 |
+| 알고리즘 | `least_conn` (활성 연결 수 기준, WebSocket에 적합) |
+| 배포 전략 | 해당 없음 (Nginx 설정만 관리) |
+| 보안 | HTTPS / WSS SSL 종료, Elastic IP 고정 |
+
+- EC2 #2의 80 포트 인바운드는 `ec2_lb` SG에서만 허용 (인터넷 직접 노출 없음)
+- AI 서버 추가 시 `/etc/nginx/conf.d/ai-upstream.conf`에 `server <private_ip>:80;` 추가 후 `nginx -s reload`
+
+### EC2 #2 — AI 추론 서버
+
+| 항목 | 내용 |
+|------|------|
 | 애플리케이션 | FastAPI (Python) |
-| 리버스 프록시 | Nginx |
+| 리버스 프록시 | Nginx (HTTP, 포트 80) |
 | 배포 전략 | 블루그린 배포 |
-| 보안 | HTTPS / WSS (Nginx SSL 종료), Elastic IP 고정 |
+| 보안 | LB SG에서만 80 인바운드 허용, SSH(22)는 GitHub Actions 배포용 허용 |
+
+**모델 캐시 전략**
+- 캐시 키: `model_id` (사용자가 활성화한 모델의 DB PK)
+- WebSocket 연결 시 DB에서 현재 ACTIVE `model_id` 조회 → 캐시 히트 시 즉시 반환, 미스 시 S3 로드
+- 모델 교체(`activate_model`) 시 DB의 ACTIVE model_id가 변경되므로 다음 연결부터 자동으로 새 모델 사용
+- 인스턴스 간 캐시 동기화 불필요
 
 **프로토콜 분리**
 
@@ -109,6 +130,7 @@ infra/
     user_data/
       api_server.sh           # EC2 #1 초기화 (Docker, Redis, Nginx)
       ai_server.sh            # EC2 #2 초기화 (Docker, Nginx)
+      lb_server.sh            # EC2 LB 초기화 (Nginx upstream 설정)
 ```
 
 **ECR 수명주기 정책**: 리포지토리(api/ai/lambda)별 최근 5개 이미지만 유지, 오래된 이미지 자동 삭제
@@ -145,10 +167,12 @@ main 브랜치 push
 main 브랜치 push
   └── GitHub Actions
         ├── Docker 이미지 빌드 & ECR 푸시
-        └── EC2 #2 SSH 접속
+        └── EC2 #2 SSH 접속 (EC2_AI_HOST — AI 서버 EIP)
               └── 비활성 환경(블루/그린)에 새 이미지 배포
                     └── Nginx upstream 교체 (무중단)
 ```
+
+> EC2 #2를 추가할 경우 GitHub Actions에서 각 인스턴스에 순차 배포 후 EC2 LB upstream에 등록
 
 ### Lambda
 

@@ -23,9 +23,15 @@ variable "ec2_key_pair" {
 }
 
 variable "ec2_instance_type" {
-  description = "EC2 인스턴스 타입"
+  description = "EC2 인스턴스 타입 (api, ai 서버)"
   type        = string
   default     = "t4g.micro"
+}
+
+variable "ec2_lb_instance_type" {
+  description = "EC2 LB 인스턴스 타입"
+  type        = string
+  default     = "t4g.micro" # AWS 프리티어 nano 사용불가 나중에 nano로 변경
 }
 
 # RDS
