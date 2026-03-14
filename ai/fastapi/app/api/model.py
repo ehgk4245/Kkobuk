@@ -9,7 +9,6 @@ from sqlalchemy.orm import Session
 from app.core.auth import get_current_member_id
 from app.core.database import get_db
 from app.models.ai_metadata import ModelStatus, TrainedModelMetadata
-from app.services.inference import invalidate_model_cache
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/models")
@@ -58,14 +57,6 @@ def activate_model(
     target.status = ModelStatus.ACTIVE
     db.commit()
 
-    invalidate_model_cache(member_id)
-
-    return {"ok": True}
-
-
-@router.post("/cache/invalidate")
-def invalidate_cache(member_id: int = Depends(get_current_member_id)):
-    invalidate_model_cache(member_id)
     return {"ok": True}
 
 
@@ -91,6 +82,5 @@ def delete_model(
 
     db.delete(target)
     db.commit()
-    invalidate_model_cache(member_id)
 
     return {"ok": True}

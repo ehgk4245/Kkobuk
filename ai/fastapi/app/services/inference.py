@@ -20,7 +20,7 @@ from preprocessing_V3 import compute_baseline, extract_features  # noqa: E402
 from app.models.ai_metadata import ModelStatus, TrainedModelMetadata
 
 _MAX_CACHE = 100
-_model_cache: OrderedDict[int, Any] = OrderedDict()
+_model_cache: OrderedDict[int, Any] = OrderedDict()  # key: model_id
 _cache_lock = threading.Lock()
 
 _s3 = boto3.client("s3", region_name=os.environ.get("AWS_REGION", "ap-northeast-2"))
@@ -34,12 +34,6 @@ def _parse_s3_url(s3_url: str) -> tuple[str, str]:
 
 
 def load_model(member_id: int, db: Session) -> Any | None:
-    with _cache_lock:
-        if member_id in _model_cache:
-            _model_cache.move_to_end(member_id)
-            logger.info("[load_model] member_id=%d: cache hit", member_id)
-            return _model_cache[member_id]
-
     row = (
         db.query(TrainedModelMetadata)
         .filter_by(member_id=member_id, status=ModelStatus.ACTIVE)
@@ -49,25 +43,26 @@ def load_model(member_id: int, db: Session) -> Any | None:
         logger.warning("[load_model] member_id=%d: ACTIVE 모델 없음", member_id)
         return None
 
+    with _cache_lock:
+        if row.id in _model_cache:
+            _model_cache.move_to_end(row.id)
+            logger.info("[load_model] member_id=%d model_id=%d: cache hit", member_id, row.id)
+            return _model_cache[row.id]
+
     bucket, key = _parse_s3_url(row.s3_url)
-    logger.info("[load_model] member_id=%d: S3 다운로드 시작 s3://%s/%s", member_id, bucket, key)
+    logger.info("[load_model] member_id=%d model_id=%d: S3 다운로드 시작 s3://%s/%s", member_id, row.id, bucket, key)
     buf = io.BytesIO()
     _s3.download_fileobj(bucket, key, buf)
     buf.seek(0)
     model = joblib.load(buf)
-    logger.info("[load_model] member_id=%d: 모델 로드 완료", member_id)
+    logger.info("[load_model] member_id=%d model_id=%d: 모델 로드 완료", member_id, row.id)
 
     with _cache_lock:
         if len(_model_cache) >= _MAX_CACHE:
             _model_cache.popitem(last=False)
-        _model_cache[member_id] = model
+        _model_cache[row.id] = model
 
     return model
-
-
-def invalidate_model_cache(member_id: int) -> None:
-    with _cache_lock:
-        _model_cache.pop(member_id, None)
 
 
 def predict(model_bundle: Any, landmarks: dict, baseline: np.ndarray) -> tuple[str, float]:

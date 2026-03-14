@@ -54,7 +54,6 @@ public class TrainingService {
         checkModelLimit(accessToken);
         String s3Key = uploadToS3(memberId, request);
         invokeLambda(memberId, s3Key, request);
-        invalidateFastApiCache(accessToken);
     }
 
     private void checkModelLimit(String accessToken) {
@@ -123,15 +122,4 @@ public class TrainingService {
         }
     }
 
-    private void invalidateFastApiCache(String accessToken) {
-        try {
-            restClient.post()
-                    .uri(aiBaseUrl + "/api/models/cache/invalidate")
-                    .header("Authorization", "Bearer " + accessToken)
-                    .retrieve()
-                    .toBodilessEntity();
-        } catch (Exception e) {
-            log.warn("[invalidateFastApiCache] AI 서버 캐시 무효화 실패 (무시): {}", e.getMessage());
-        }
-    }
 }
