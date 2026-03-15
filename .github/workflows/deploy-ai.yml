@@ -4,7 +4,8 @@ on:
   push:
     branches: [main]
     paths:
-      - 'ai/**'
+      - 'ai/fastapi/**'
+      - 'ai/shared/**'
       - '.github/workflows/deploy-ai.yml'
       - '.github/scripts/blue-green-ai.sh'
 
