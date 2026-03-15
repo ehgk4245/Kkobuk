@@ -78,7 +78,6 @@ def handler(event, context):
     model_bundle = {
         "model": model,
         "scaler": scaler,
-        "baseline": baseline,
     }
     model_key = f"models/{member_id}/{uuid.uuid4()}.pkl"
     model_bytes = pickle.dumps(model_bundle)
