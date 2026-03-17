@@ -1,10 +1,12 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { PoseLandmarker, FaceLandmarker, FilesetResolver } from '@mediapipe/tasks-vision'
-import { Camera, CheckCircle, AlertTriangle, ArrowRight, Loader2 } from 'lucide-react'
+import { Camera, ArrowRight, Loader2 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
-import logo from '../../../../resources/icon.png'
-import { useWebcam } from '../context/WebcamContext'
-import { apiFetch } from '../utils/api'
+import logo from '../../../../../resources/icon.png'
+import { useWebcam } from '../../context/WebcamContext'
+import { apiFetch } from '../../utils/api'
+import { useMediaPipe } from '../../hooks/useMediaPipe'
+import CaptureCard from './components/CaptureCard'
+import ModelNameForm from './components/ModelNameForm'
 
 const PREPARE_SECONDS = 5
 const COLLECT_SECONDS = 30
@@ -15,22 +17,15 @@ const POSE_IDX = { leftShoulder: 11, rightShoulder: 12 }
 const FACE_IDX = { nose: 4, leftEar: 234, rightEar: 454 }
 const pickXYZ = ({ x, y, z }) => ({ x, y, z })
 
-const WASM_URL = './mediapipe-wasm'
-const POSE_MODEL_URL = './mediapipe-wasm/pose_landmarker_lite.task'
-const FACE_MODEL_URL = './mediapipe-wasm/face_landmarker.task'
-
 export default function Training() {
   const navigate = useNavigate()
   const { stream } = useWebcam()
   const videoRef = useRef(null)
-  const poseLandmarkerRef = useRef(null)
-  const faceLandmarkerRef = useRef(null)
   const animFrameRef = useRef(null)
   const prepTimerRef = useRef(null)
   const allSamplesRef = useRef([])
 
-  const [mpReady, setMpReady] = useState(false)
-  const [mpError, setMpError] = useState(null)
+  const { poseLandmarkerRef, faceLandmarkerRef, mpReady, mpError } = useMediaPipe()
 
   const [capturedGood, setCapturedGood] = useState(false)
   const [capturedBad, setCapturedBad] = useState(false)
@@ -49,38 +44,6 @@ export default function Training() {
   const isCapturing = capturePhase === 'prepare' || capturePhase === 'collecting'
 
   useEffect(() => {
-    let cancelled = false
-    ;(async () => {
-      try {
-        const vision = await FilesetResolver.forVisionTasks(WASM_URL)
-        const [pose, face] = await Promise.all([
-          PoseLandmarker.createFromOptions(vision, {
-            baseOptions: { modelAssetPath: POSE_MODEL_URL, delegate: 'GPU' },
-            runningMode: 'VIDEO',
-            numPoses: 1
-          }),
-          FaceLandmarker.createFromOptions(vision, {
-            baseOptions: { modelAssetPath: FACE_MODEL_URL, delegate: 'GPU' },
-            runningMode: 'VIDEO',
-            numFaces: 1
-          })
-        ])
-        if (!cancelled) {
-          poseLandmarkerRef.current = pose
-          faceLandmarkerRef.current = face
-          setMpReady(true)
-        }
-      } catch (err) {
-        console.error('[MediaPipe] 초기화 실패:', err)
-        if (!cancelled) setMpError('AI 모델 로드 실패: ' + err.message)
-      }
-    })()
-    return () => {
-      cancelled = true
-    }
-  }, [])
-
-  useEffect(() => {
     if (videoRef.current && stream) {
       videoRef.current.srcObject = stream
     }
@@ -93,70 +56,73 @@ export default function Training() {
     }
   }, [])
 
-  const startCollection = useCallback((mode) => {
-    setCapturePhase('collecting')
-    setElapsedSec(0)
-    setFrameCount(0)
+  const startCollection = useCallback(
+    (mode) => {
+      setCapturePhase('collecting')
+      setElapsedSec(0)
+      setFrameCount(0)
 
-    const label = LABEL[mode]
-    const sessionSamples = []
-    const startTime = performance.now()
-    const duration = COLLECT_SECONDS * 1000
-    let lastSampleTime = 0
+      const label = LABEL[mode]
+      const sessionSamples = []
+      const startTime = performance.now()
+      const duration = COLLECT_SECONDS * 1000
+      let lastSampleTime = 0
 
-    const collect = () => {
-      const now = performance.now()
-      const elapsed = now - startTime
-      setElapsedSec(Math.min(Math.floor(elapsed / 1000), COLLECT_SECONDS))
+      const collect = () => {
+        const now = performance.now()
+        const elapsed = now - startTime
+        setElapsedSec(Math.min(Math.floor(elapsed / 1000), COLLECT_SECONDS))
 
-      if (elapsed >= duration) {
-        allSamplesRef.current = [...allSamplesRef.current, ...sessionSamples]
-        if (mode === 'good') setCapturedGood(true)
-        else setCapturedBad(true)
-        setFrameCount(sessionSamples.length)
-        setCapturePhase('done')
-        setTimeout(() => {
-          setCapturePhase(null)
-          setCaptureMode(null)
-        }, 1800)
-        return
-      }
+        if (elapsed >= duration) {
+          allSamplesRef.current = [...allSamplesRef.current, ...sessionSamples]
+          if (mode === 'good') setCapturedGood(true)
+          else setCapturedBad(true)
+          setFrameCount(sessionSamples.length)
+          setCapturePhase('done')
+          setTimeout(() => {
+            setCapturePhase(null)
+            setCaptureMode(null)
+          }, 1800)
+          return
+        }
 
-      const video = videoRef.current
-      const pose = poseLandmarkerRef.current
-      const face = faceLandmarkerRef.current
-      if (
-        video &&
-        pose &&
-        face &&
-        video.readyState >= 2 &&
-        now - lastSampleTime >= SAMPLE_INTERVAL_MS
-      ) {
-        try {
-          const poseResults = pose.detectForVideo(video, now)
-          const faceResults = face.detectForVideo(video, now)
-          const posePts = poseResults.landmarks?.[0]
-          const facePts = faceResults.faceLandmarks?.[0]
-          if (posePts && facePts) {
-            sessionSamples.push({
-              label,
-              nose: pickXYZ(facePts[FACE_IDX.nose]),
-              leftEar: pickXYZ(facePts[FACE_IDX.leftEar]),
-              rightEar: pickXYZ(facePts[FACE_IDX.rightEar]),
-              leftShoulder: pickXYZ(posePts[POSE_IDX.leftShoulder]),
-              rightShoulder: pickXYZ(posePts[POSE_IDX.rightShoulder])
-            })
-            lastSampleTime = now
-            setFrameCount(sessionSamples.length)
-          }
-        } catch {} // eslint-disable-line no-empty
+        const video = videoRef.current
+        const pose = poseLandmarkerRef.current
+        const face = faceLandmarkerRef.current
+        if (
+          video &&
+          pose &&
+          face &&
+          video.readyState >= 2 &&
+          now - lastSampleTime >= SAMPLE_INTERVAL_MS
+        ) {
+          try {
+            const poseResults = pose.detectForVideo(video, now)
+            const faceResults = face.detectForVideo(video, now)
+            const posePts = poseResults.landmarks?.[0]
+            const facePts = faceResults.faceLandmarks?.[0]
+            if (posePts && facePts) {
+              sessionSamples.push({
+                label,
+                nose: pickXYZ(facePts[FACE_IDX.nose]),
+                leftEar: pickXYZ(facePts[FACE_IDX.leftEar]),
+                rightEar: pickXYZ(facePts[FACE_IDX.rightEar]),
+                leftShoulder: pickXYZ(posePts[POSE_IDX.leftShoulder]),
+                rightShoulder: pickXYZ(posePts[POSE_IDX.rightShoulder])
+              })
+              lastSampleTime = now
+              setFrameCount(sessionSamples.length)
+            }
+          } catch {} // eslint-disable-line no-empty
+        }
+
+        animFrameRef.current = requestAnimationFrame(collect)
       }
 
       animFrameRef.current = requestAnimationFrame(collect)
-    }
-
-    animFrameRef.current = requestAnimationFrame(collect)
-  }, [])
+    },
+    [poseLandmarkerRef, faceLandmarkerRef]
+  )
 
   const handleCancelCapture = useCallback(() => {
     if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current)
@@ -216,6 +182,11 @@ export default function Training() {
   const handleComplete = () => {
     localStorage.setItem('onboardingComplete', 'true')
     navigate('/main')
+  }
+
+  const handleModelFormChange = (field, value) => {
+    if (field === 'name') setModelName(value)
+    else setModelDescription(value)
   }
 
   const modeLabel = captureMode === 'good' ? '바른 자세' : '거북목 자세'
@@ -356,86 +327,27 @@ export default function Training() {
         </div>
 
         <div className="mt-10 flex gap-6 w-full max-w-2xl px-4">
-          <div
-            className={`flex-1 bg-gray-800 rounded-3xl p-6 shadow-md border ${
-              capturedGood ? 'border-[#8BC34A] shadow-lg' : 'border-transparent'
-            }`}
-          >
-            <div className="flex flex-col items-center gap-4">
-              <div className="w-16 h-16 rounded-2xl bg-[#8BC34A]/10 text-[#8BC34A] flex items-center justify-center">
-                <CheckCircle size={32} />
-              </div>
-              <div className="text-center">
-                <div className="font-extrabold text-white text-lg">
-                  바른 자세 촬영{' '}
-                  {capturedGood && <span className="text-[#8BC34A] text-sm ml-1">✓ 완료</span>}
-                </div>
-                <div className="text-xs text-gray-400 mt-1.5 font-medium">
-                  허리를 펴고 목을 당겨
-                  <br />
-                  바른 자세를 취해 주세요
-                </div>
-              </div>
-              <button
-                onClick={() => handleCapture('good')}
-                disabled={!mpReady || isCapturing || isTraining || isComplete}
-                className="mt-1 px-5 py-1.5 rounded-full text-sm font-semibold border border-[#8BC34A] text-[#8BC34A] hover:bg-[#8BC34A]/10 transition disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent"
-              >
-                {capturedGood ? '다시 학습하기' : '학습하기'}
-              </button>
-            </div>
-          </div>
-
-          <div
-            className={`flex-1 bg-gray-800 rounded-3xl p-6 shadow-md border ${
-              capturedBad ? 'border-[#FFC107] shadow-lg' : 'border-transparent'
-            }`}
-          >
-            <div className="flex flex-col items-center gap-4">
-              <div className="w-16 h-16 rounded-2xl bg-[#FFC107]/10 text-[#FFC107] flex items-center justify-center">
-                <AlertTriangle size={32} />
-              </div>
-              <div className="text-center">
-                <div className="font-extrabold text-white text-lg">
-                  거북목 자세 촬영{' '}
-                  {capturedBad && <span className="text-[#FFC107] text-sm ml-1">✓ 완료</span>}
-                </div>
-                <div className="text-xs text-gray-400 mt-1.5 font-medium">
-                  자연스럽게 나오는 거북목
-                  <br />
-                  자세를 취해 주세요
-                </div>
-              </div>
-              <button
-                onClick={() => handleCapture('bad')}
-                disabled={!mpReady || isCapturing || isTraining || isComplete}
-                className="mt-1 px-5 py-1.5 rounded-full text-sm font-semibold border border-[#FFC107] text-[#FFC107] hover:bg-[#FFC107]/10 transition disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent"
-              >
-                {capturedBad ? '다시 학습하기' : '학습하기'}
-              </button>
-            </div>
-          </div>
+          <CaptureCard
+            mode="good"
+            captured={capturedGood}
+            disabled={!mpReady || isCapturing || isTraining || isComplete}
+            onCapture={handleCapture}
+          />
+          <CaptureCard
+            mode="bad"
+            captured={capturedBad}
+            disabled={!mpReady || isCapturing || isTraining || isComplete}
+            onCapture={handleCapture}
+          />
         </div>
 
         {bothCaptured && !isComplete && (
-          <div className="mt-6 w-full max-w-2xl px-4 flex flex-col gap-3">
-            <input
-              type="text"
-              placeholder="모델 이름 (예: 사무실 자세 모델)"
-              value={modelName}
-              onChange={(e) => setModelName(e.target.value)}
-              disabled={isTraining}
-              className="w-full bg-gray-800 border border-gray-700 rounded-2xl px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-[#8BC34A] transition disabled:opacity-50"
-            />
-            <input
-              type="text"
-              placeholder="설명 (선택사항)"
-              value={modelDescription}
-              onChange={(e) => setModelDescription(e.target.value)}
-              disabled={isTraining}
-              className="w-full bg-gray-800 border border-gray-700 rounded-2xl px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-[#8BC34A] transition disabled:opacity-50"
-            />
-          </div>
+          <ModelNameForm
+            modelName={modelName}
+            modelDescription={modelDescription}
+            onChange={handleModelFormChange}
+            disabled={isTraining}
+          />
         )}
 
         <div className="mt-8 flex items-center gap-3">
