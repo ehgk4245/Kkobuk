@@ -41,7 +41,7 @@ export default function Training() {
   const [frameCount, setFrameCount] = useState(0)
 
   const bothCaptured = capturedGood && capturedBad
-  const isCapturing = capturePhase === 'prepare' || capturePhase === 'collecting'
+  const isCapturing = capturePhase !== null
 
   useEffect(() => {
     if (videoRef.current && stream) {
@@ -74,7 +74,10 @@ export default function Training() {
         setElapsedSec(Math.min(Math.floor(elapsed / 1000), COLLECT_SECONDS))
 
         if (elapsed >= duration) {
-          allSamplesRef.current = [...allSamplesRef.current, ...sessionSamples]
+          allSamplesRef.current = [
+            ...allSamplesRef.current.filter((s) => s.label !== label),
+            ...sessionSamples
+          ]
           if (mode === 'good') setCapturedGood(true)
           else setCapturedBad(true)
           setFrameCount(sessionSamples.length)
