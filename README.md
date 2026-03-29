@@ -64,7 +64,7 @@ MSA 구조에서 각 서비스를 완전히 독립시키려면 서비스별 DB �
 
 ## 모델 학습 및 추론
 
-<details>
+<details open>
 <summary><b>데이터 추출 및 전처리</b></summary>
 
 #### 랜드마크 추출
