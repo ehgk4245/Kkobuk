@@ -6,6 +6,7 @@ from fastapi import APIRouter, Query, WebSocket, WebSocketDisconnect
 
 from app.core.auth import verify_token
 from app.core.database import SessionLocal
+from app.services.baseline_cache import get_baseline, set_baseline
 from app.services.inference import build_baseline, load_model, predict
 
 logger = logging.getLogger(__name__)
@@ -51,6 +52,18 @@ async def posture_ws(ws: WebSocket, token: str = Query(...)):
     await ws.send_json({"type": "connected"})
 
     baseline: np.ndarray | None = None
+    baseline_from_client = asyncio.Event()
+
+    async def _load_baseline_from_redis():
+        nonlocal baseline
+        cached = await get_baseline(member_id)
+        if cached is None:
+            return
+        if baseline_from_client.is_set():
+            return
+        baseline = cached
+
+    asyncio.ensure_future(_load_baseline_from_redis())
 
     try:
         while True:
@@ -63,6 +76,8 @@ async def posture_ws(ws: WebSocket, token: str = Query(...)):
                     await ws.send_json({"type": "error", "message": "베이스라인 샘플이 없습니다."})
                     continue
                 baseline = build_baseline(samples)
+                baseline_from_client.set()
+                asyncio.ensure_future(set_baseline(member_id, baseline))
                 await ws.send_json({"type": "ready"})
 
             elif msg_type == "frame":
