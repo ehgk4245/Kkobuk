@@ -46,7 +46,7 @@ macOS 보안 정책으로 인해 "개발자를 확인할 수 없습니다" 경�
 | 서비스 | 역할 | 선택 이유 |
 |-------|------|----------|
 | **Spring Boot** | 인증, 비즈니스 로직, 자세 세션 기록 | OAuth2 소셜 로그인 추상화가 잘 되어 있고, REST API 서버로 가장 익숙한 스택 |
-| **FastAPI** | 실시간 AI 추론 (WebSocket), 모델·학습 데이터 메타데이터 관리 | scikit-learn 생태계와의 자연스러운 통합, 비동기 WebSocket 처리에 적합 |
+| **FastAPI** | 실시간 AI 추론 (WebSocket), 모델·학습 데이터 메타데이터 관리 | scikit-learn 생태계와의 자연스러운 통합, 연결당 스레드를 점유하지 않아 다수의 WebSocket 동시 연결에 유리 |
 | **Lambda** | 모델 학습 파이프라인 | 학습 요청은 빈번하지 않고 CPU 집약적 — 동시 요청 시 API/AI 서버에 부하를 주지 않도록 요청마다 독립 인스턴스에서 실행되는 Lambda로 분리 |
 
 > FastAPI가 모델 메타데이터 API를 함께 제공하는 이유: Spring Boot(`kkobuk` DB)와 FastAPI(`kkobuk_ai` DB)가 서로 다른 DB를 사용해 결합도를 낮추는 구조이므로, AI 관련 메타데이터는 FastAPI 서버에서 제공합니다.
