@@ -22,7 +22,7 @@
         └──── WSS ───────▶ ai.kkobuk.site [EC2 LB] → [EC2 #2] (WebSocket 투명 프록시)
 
 Spring Boot REST API
-    └── AWS SDK InvokeAsync ──▶ [Lambda] 학습 파이프라인
+    └── AWS SDK Invoke (동기) ──▶ [Lambda] 학습 파이프라인
                                     ├── [S3] 학습 데이터 읽기 → 전처리 → LR 학습
                                     ├── [S3] 모델 저장
                                     └── [RDS] kkobuk_ai DB 메타데이터 저장
@@ -104,7 +104,7 @@ Spring Boot REST API
 
 ### Lambda — 학습 파이프라인
 
-- **트리거**: Spring Boot REST API가 AWS SDK (`InvokeAsync`)로 호출
+- **트리거**: Spring Boot REST API가 AWS SDK (`Invoke`, 동기)로 호출
 - **인증 불필요**: VPC 내부 서버 간 호출이므로 JWT 검증 없음
 
 1. S3에서 학습 데이터 읽기 (~600개)
